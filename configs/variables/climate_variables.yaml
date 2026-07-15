@@ -1,0 +1,17 @@
+variables:
+
+  rainfall:
+    display_name: Rainfall
+    canonical_unit: mm
+    category: precipitation
+    non_negative: true
+
+  tmax:
+    display_name: Maximum Temperature
+    canonical_unit: degree_celsius
+    category: temperature
+
+  tmin:
+    display_name: Minimum Temperature
+    canonical_unit: degree_celsius
+    category: temperature

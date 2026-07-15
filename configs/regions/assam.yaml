@@ -1,0 +1,19 @@
+region:
+  id: assam
+  name: Assam
+  country_code: IN
+  level: state
+  parent_region: india
+  timezone: Asia/Kolkata
+
+  pilot: true
+
+  supported_variables:
+    - rainfall
+    - tmax
+    - tmin
+
+  analysis:
+    native_grid_processing: true
+    district_aggregation: true
+    regional_aggregation: true

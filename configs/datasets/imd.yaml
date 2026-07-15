@@ -1,0 +1,31 @@
+datasets:
+
+  imd_rainfall_daily:
+    provider: IMD
+    variable: rainfall
+    temporal_resolution: daily
+    spatial_resolution: 0.25_degree
+    role:
+      - historical_analysis
+      - climatology
+      - forecasting
+
+  imd_tmax_daily:
+    provider: IMD
+    variable: tmax
+    temporal_resolution: daily
+    spatial_resolution: 1_degree
+    role:
+      - historical_analysis
+      - climatology
+      - forecasting
+
+  imd_tmin_daily:
+    provider: IMD
+    variable: tmin
+    temporal_resolution: daily
+    spatial_resolution: 1_degree
+    role:
+      - historical_analysis
+      - climatology
+      - forecasting

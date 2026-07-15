@@ -1,0 +1,94 @@
+# ==========================================
+# Python
+# ==========================================
+
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+
+.venv/
+venv/
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ==========================================
+# Node
+# ==========================================
+
+node_modules/
+dist/
+.vite/
+
+# ==========================================
+# Environment variables
+# ==========================================
+
+.env
+.env.local
+.env.*.local
+
+# Keep examples
+!.env.example
+
+# ==========================================
+# Data
+# ==========================================
+
+data/raw/*
+data/interim/*
+data/processed/*
+data/derived/*
+
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+!data/derived/.gitkeep
+
+# ==========================================
+# Model artifacts
+# ==========================================
+
+model_registry/**/*.pkl
+model_registry/**/*.joblib
+model_registry/**/*.bin
+model_registry/**/*.pt
+model_registry/**/*.pth
+model_registry/**/*.onnx
+
+# ==========================================
+# Jupyter
+# ==========================================
+
+.ipynb_checkpoints/
+
+# ==========================================
+# IDE
+# ==========================================
+
+.vscode/
+.idea/
+
+# ==========================================
+# Operating System
+# ==========================================
+
+.DS_Store
+Thumbs.db
+
+# ==========================================
+# Logs
+# ==========================================
+
+*.log
+logs/
+
+# ==========================================
+# Test Coverage
+# ==========================================
+
+htmlcov/
+.coverage
+coverage.xml
