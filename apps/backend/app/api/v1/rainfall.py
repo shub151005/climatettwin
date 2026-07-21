@@ -11,6 +11,19 @@ router = APIRouter(
     tags=["Rainfall"],
 )
 
+from datetime import date
+from pathlib import Path
+
+import pandas as pd
+import xarray as xr
+from fastapi import APIRouter, HTTPException, Query
+
+from app.schemas.rainfall import (
+    DailyRainfallSummary,
+    MonthlyRainfallSummary,
+    RainfallFieldCell,
+    RainfallFieldResponse,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[5]
 
@@ -30,6 +43,14 @@ MONTHLY_SUMMARY_FILE = (
     / "assam_rainfall_monthly_summary_2025.csv"
 )
 
+ASSAM_RAINFALL_NETCDF_FILE = (
+    PROJECT_ROOT
+    / "data"
+    / "processed"
+    / "imd"
+    / "rainfall"
+    / "assam_rainfall_2025_bbox.nc"
+)
 
 @router.get(
     "/assam/daily-summary",
@@ -86,3 +107,63 @@ def get_assam_monthly_rainfall_summary() -> list[MonthlyRainfallSummary]:
         )
         for _, row in dataframe.iterrows()
     ]
+
+@router.get(
+    "/assam/field",
+    response_model=RainfallFieldResponse,
+    summary="Get Assam rainfall field for a selected date",
+)
+def get_assam_rainfall_field(
+    selected_date: date = Query(
+        default=date(2025, 5, 30),
+        description="Date for rainfall field in YYYY-MM-DD format",
+    )
+) -> RainfallFieldResponse:
+    if not ASSAM_RAINFALL_NETCDF_FILE.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Rainfall NetCDF file not found: {ASSAM_RAINFALL_NETCDF_FILE}",
+        )
+
+    dataset = xr.open_dataset(ASSAM_RAINFALL_NETCDF_FILE)
+
+    try:
+        rainfall_field = dataset["RAINFALL"].sel(TIME=str(selected_date))
+    except KeyError as error:
+        dataset.close()
+        raise HTTPException(
+            status_code=404,
+            detail=f"No rainfall data found for date: {selected_date}",
+        ) from error
+
+    rainfall_dataframe = (
+        rainfall_field
+        .to_dataframe(name="rainfall_mm")
+        .reset_index()
+        .dropna(subset=["rainfall_mm"])
+    )
+
+    cells = [
+        RainfallFieldCell(
+            latitude=float(row["LATITUDE"]),
+            longitude=float(row["LONGITUDE"]),
+            rainfall_mm=float(row["rainfall_mm"]),
+        )
+        for _, row in rainfall_dataframe.iterrows()
+    ]
+
+    response = RainfallFieldResponse(
+        region="assam",
+        date=selected_date,
+        variable="rainfall",
+        unit="mm/day",
+        cell_count=len(cells),
+        rainfall_min_mm=float(rainfall_dataframe["rainfall_mm"].min()),
+        rainfall_max_mm=float(rainfall_dataframe["rainfall_mm"].max()),
+        rainfall_mean_mm=float(rainfall_dataframe["rainfall_mm"].mean()),
+        cells=cells,
+    )
+
+    dataset.close()
+
+    return response

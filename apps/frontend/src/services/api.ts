@@ -20,6 +20,24 @@ export interface DailyRainfallSummary {
   day_of_year: number;
 }
 
+export interface RainfallFieldCell {
+  latitude: number;
+  longitude: number;
+  rainfall_mm: number;
+}
+
+
+export interface RainfallFieldResponse {
+  region: string;
+  date: string;
+  variable: string;
+  unit: string;
+  cell_count: number;
+  rainfall_min_mm: number;
+  rainfall_max_mm: number;
+  rainfall_mean_mm: number;
+  cells: RainfallFieldCell[];
+}
 
 export async function getHealthStatus(): Promise<HealthResponse> {
   const response = await fetch(`${API_BASE_URL}/health`);
@@ -76,3 +94,18 @@ export async function getAssamMonthlyRainfallSummary(): Promise<
   return response.json() as Promise<MonthlyRainfallSummary[]>;
 }
 
+export async function getAssamRainfallField(
+  selectedDate = "2025-05-30"
+): Promise<RainfallFieldResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/rainfall/assam/field?selected_date=${selectedDate}`
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `Rainfall field request failed with status ${response.status}`
+    );
+  }
+
+  return response.json() as Promise<RainfallFieldResponse>;
+}

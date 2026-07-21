@@ -20,3 +20,20 @@ class MonthlyRainfallSummary(BaseModel):
     valid_grid_cell_count_mean: float
     rainy_days: int
     heavy_rain_days: int
+
+class RainfallFieldCell(BaseModel):
+    latitude: float
+    longitude: float
+    rainfall_mm: float
+
+
+class RainfallFieldResponse(BaseModel):
+    region: str
+    date: date
+    variable: str
+    unit: str
+    cell_count: int
+    rainfall_min_mm: float
+    rainfall_max_mm: float
+    rainfall_mean_mm: float
+    cells: list[RainfallFieldCell]

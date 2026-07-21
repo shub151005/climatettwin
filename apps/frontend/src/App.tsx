@@ -2,41 +2,52 @@ import { useEffect, useMemo, useState } from "react";
 
 import { MonthlyRainfallBarChart } from "./components/charts/MonthlyRainfallBarChart";
 import { RainfallLineChart } from "./components/charts/RainfallLineChart";
+import { RainfallFieldPreview } from "./components/map/RainfallFieldPreview";
 import {
   getAssamDailyRainfallSummary,
   getAssamMonthlyRainfallSummary,
+  getAssamRainfallField,
   getHealthStatus,
   type DailyRainfallSummary,
   type HealthResponse,
   type MonthlyRainfallSummary,
+  type RainfallFieldResponse,
 } from "./services/api";
 
 
 function App() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [rainfall, setRainfall] = useState<DailyRainfallSummary[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [monthlyRainfall, setMonthlyRainfall] = useState<
-  MonthlyRainfallSummary[]
+    MonthlyRainfallSummary[]
   >([]);
+  const [rainfallField, setRainfallField] =
+    useState<RainfallFieldResponse | null>(null);
+
+  const [error, setError] = useState<string | null>(null);
 
 
   useEffect(() => {
     async function loadInitialData(): Promise<void> {
       try {
-         const [healthResult, rainfallResult, monthlyRainfallResult] =
-            await Promise.all([
-            getHealthStatus(),
-            getAssamDailyRainfallSummary(),
-            getAssamMonthlyRainfallSummary(),
-            ]);
+        setError(null);
 
-setHealth(healthResult);
-setRainfall(rainfallResult);
-setMonthlyRainfall(monthlyRainfallResult);
+        const [
+          healthResult,
+          rainfallResult,
+          monthlyRainfallResult,
+          rainfallFieldResult,
+        ] = await Promise.all([
+          getHealthStatus(),
+          getAssamDailyRainfallSummary(),
+          getAssamMonthlyRainfallSummary(),
+          getAssamRainfallField("2025-05-30"),
+        ]);
 
         setHealth(healthResult);
         setRainfall(rainfallResult);
+        setMonthlyRainfall(monthlyRainfallResult);
+        setRainfallField(rainfallFieldResult);
       } catch (requestError) {
         setError(
           requestError instanceof Error
@@ -171,7 +182,7 @@ setMonthlyRainfall(monthlyRainfallResult);
             }}
           >
             <h2 style={{ marginTop: 0 }}>
-              Highest regional mean rainfall day
+              Highest Regional Mean Rainfall Day
             </h2>
 
             <p style={{ marginBottom: 0, color: "#4b5563" }}>
@@ -191,9 +202,13 @@ setMonthlyRainfall(monthlyRainfallResult);
 
         {monthlyRainfall.length > 0 && (
           <div style={{ marginTop: "24px" }}>
-          <MonthlyRainfallBarChart data={monthlyRainfall} />
+            <MonthlyRainfallBarChart data={monthlyRainfall} />
           </div>
-          )}
+        )}
+
+        {rainfallField && (
+          <RainfallFieldPreview data={rainfallField} />
+        )}
 
         {rainfall.length === 0 && !error && (
           <p>Loading rainfall data...</p>
