@@ -24,6 +24,11 @@ function App() {
   const [rainfallField, setRainfallField] =
     useState<RainfallFieldResponse | null>(null);
 
+  const [selectedFieldDate, setSelectedFieldDate] = useState("2025-05-30");
+  const [isFieldLoading, setIsFieldLoading] = useState(false);
+  const [isPlayingFieldAnimation, setIsPlayingFieldAnimation] =
+    useState(false);
+
   const [error, setError] = useState<string | null>(null);
 
 
@@ -59,6 +64,83 @@ function App() {
 
     void loadInitialData();
   }, []);
+
+
+  async function handleFieldDateChange(dateValue: string): Promise<void> {
+    try {
+      setSelectedFieldDate(dateValue);
+      setIsFieldLoading(true);
+      setError(null);
+
+      const rainfallFieldResult = await getAssamRainfallField(dateValue);
+
+      setRainfallField(rainfallFieldResult);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unknown rainfall field error"
+      );
+    } finally {
+      setIsFieldLoading(false);
+    }
+  }
+
+
+  function shiftDate(dateValue: string, dayOffset: number): string {
+    const currentDate = new Date(dateValue);
+    currentDate.setDate(currentDate.getDate() + dayOffset);
+
+    const minDate = new Date("2025-01-01");
+    const maxDate = new Date("2025-12-31");
+
+    if (currentDate < minDate) {
+      return "2025-01-01";
+    }
+
+    if (currentDate > maxDate) {
+      return "2025-12-31";
+    }
+
+    return currentDate.toISOString().slice(0, 10);
+  }
+
+
+  async function handlePreviousFieldDay(): Promise<void> {
+    const previousDate = shiftDate(selectedFieldDate, -1);
+    await handleFieldDateChange(previousDate);
+  }
+
+
+  async function handleNextFieldDay(): Promise<void> {
+    const nextDate = shiftDate(selectedFieldDate, 1);
+    await handleFieldDateChange(nextDate);
+  }
+
+
+  useEffect(() => {
+    if (!isPlayingFieldAnimation) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setSelectedFieldDate((currentDate) => {
+        const nextDate = shiftDate(currentDate, 1);
+
+        if (nextDate === currentDate || nextDate === "2025-12-31") {
+          setIsPlayingFieldAnimation(false);
+        }
+
+        void handleFieldDateChange(nextDate);
+
+        return nextDate;
+      });
+    }, 900);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isPlayingFieldAnimation]);
 
 
   const rainfallStats = useMemo(() => {
@@ -207,7 +289,147 @@ function App() {
         )}
 
         {rainfallField && (
-          <RainfallFieldPreview data={rainfallField} />
+          <section style={{ marginTop: "24px" }}>
+            <div
+              style={{
+                background: "#ffffff",
+                border: "1px solid #e5e7eb",
+                borderRadius: "16px",
+                padding: "20px",
+                marginBottom: "16px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: "16px",
+                flexWrap: "wrap",
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0 }}>
+                  Spatial Rainfall State
+                </h3>
+
+                <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
+                  Select a date or play the rainfall field animation.
+                </p>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "end",
+                  gap: "10px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handlePreviousFieldDay();
+                  }}
+                  disabled={
+                    isFieldLoading || selectedFieldDate === "2025-01-01"
+                  }
+                  style={{
+                    padding: "10px 12px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "10px",
+                    background: "#ffffff",
+                    cursor: "pointer",
+                  }}
+                >
+                  Previous
+                </button>
+
+                <div>
+                  <label
+                    htmlFor="field-date"
+                    style={{
+                      display: "block",
+                      marginBottom: "6px",
+                      color: "#374151",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Date
+                  </label>
+
+                  <input
+                    id="field-date"
+                    type="date"
+                    min="2025-01-01"
+                    max="2025-12-31"
+                    value={selectedFieldDate}
+                    onChange={(event) => {
+                      void handleFieldDateChange(event.target.value);
+                    }}
+                    style={{
+                      padding: "10px 12px",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "10px",
+                      fontSize: "14px",
+                    }}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleNextFieldDay();
+                  }}
+                  disabled={
+                    isFieldLoading || selectedFieldDate === "2025-12-31"
+                  }
+                  style={{
+                    padding: "10px 12px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "10px",
+                    background: "#ffffff",
+                    cursor: "pointer",
+                  }}
+                >
+                  Next
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPlayingFieldAnimation((current) => !current);
+                  }}
+                  disabled={isFieldLoading}
+                  style={{
+                    padding: "10px 14px",
+                    border: "1px solid #2563eb",
+                    borderRadius: "10px",
+                    background: isPlayingFieldAnimation
+                      ? "#eff6ff"
+                      : "#2563eb",
+                    color: isPlayingFieldAnimation ? "#2563eb" : "#ffffff",
+                    cursor: "pointer",
+                    fontWeight: 700,
+                  }}
+                >
+                  {isPlayingFieldAnimation ? "Pause" : "Play"}
+                </button>
+              </div>
+            </div>
+
+            {isFieldLoading ? (
+              <section
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "16px",
+                  padding: "20px",
+                }}
+              >
+                Loading rainfall field...
+              </section>
+            ) : (
+              <RainfallFieldPreview data={rainfallField} />
+            )}
+          </section>
         )}
 
         {rainfall.length === 0 && !error && (
