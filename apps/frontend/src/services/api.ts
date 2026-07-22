@@ -39,6 +39,16 @@ export interface RainfallFieldResponse {
   cells: RainfallFieldCell[];
 }
 
+export interface RainfallFieldSequenceResponse {
+  region: string;
+  start_date: string;
+  end_date: string;
+  variable: string;
+  unit: string;
+  day_count: number;
+  fields: RainfallFieldResponse[];
+}
+
 export async function getHealthStatus(): Promise<HealthResponse> {
   const response = await fetch(`${API_BASE_URL}/health`);
 
@@ -108,4 +118,21 @@ export async function getAssamRainfallField(
   }
 
   return response.json() as Promise<RainfallFieldResponse>;
+}
+
+export async function getAssamRainfallFieldSequence(
+  startDate = "2025-05-24",
+  endDate = "2025-06-07"
+): Promise<RainfallFieldSequenceResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/rainfall/assam/field-sequence?start_date=${startDate}&end_date=${endDate}`
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `Rainfall field sequence request failed with status ${response.status}`
+    );
+  }
+
+  return response.json() as Promise<RainfallFieldSequenceResponse>;
 }

@@ -1,17 +1,4 @@
-from pathlib import Path
-
-import pandas as pd
-from fastapi import APIRouter, HTTPException
-
-from app.schemas.rainfall import DailyRainfallSummary, MonthlyRainfallSummary
-
-
-router = APIRouter(
-    prefix="/rainfall",
-    tags=["Rainfall"],
-)
-
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -23,7 +10,15 @@ from app.schemas.rainfall import (
     MonthlyRainfallSummary,
     RainfallFieldCell,
     RainfallFieldResponse,
+    RainfallFieldSequenceResponse,
 )
+
+
+router = APIRouter(
+    prefix="/rainfall",
+    tags=["Rainfall"],
+)
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[5]
 
@@ -52,6 +47,7 @@ ASSAM_RAINFALL_NETCDF_FILE = (
     / "assam_rainfall_2025_bbox.nc"
 )
 
+
 @router.get(
     "/assam/daily-summary",
     response_model=list[DailyRainfallSummary],
@@ -78,6 +74,7 @@ def get_assam_daily_rainfall_summary() -> list[DailyRainfallSummary]:
         )
         for _, row in dataframe.iterrows()
     ]
+
 
 @router.get(
     "/assam/monthly-summary",
@@ -108,6 +105,54 @@ def get_assam_monthly_rainfall_summary() -> list[MonthlyRainfallSummary]:
         for _, row in dataframe.iterrows()
     ]
 
+
+def build_rainfall_field_response(
+    dataset: xr.Dataset,
+    selected_date: date,
+) -> RainfallFieldResponse:
+    try:
+        rainfall_field = dataset["RAINFALL"].sel(TIME=str(selected_date))
+    except KeyError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No rainfall data found for date: {selected_date}",
+        ) from error
+
+    rainfall_dataframe = (
+        rainfall_field
+        .to_dataframe(name="rainfall_mm")
+        .reset_index()
+        .dropna(subset=["rainfall_mm"])
+    )
+
+    if rainfall_dataframe.empty:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No valid rainfall cells found for date: {selected_date}",
+        )
+
+    cells = [
+        RainfallFieldCell(
+            latitude=float(row["LATITUDE"]),
+            longitude=float(row["LONGITUDE"]),
+            rainfall_mm=float(row["rainfall_mm"]),
+        )
+        for _, row in rainfall_dataframe.iterrows()
+    ]
+
+    return RainfallFieldResponse(
+        region="assam",
+        date=selected_date,
+        variable="rainfall",
+        unit="mm/day",
+        cell_count=len(cells),
+        rainfall_min_mm=float(rainfall_dataframe["rainfall_mm"].min()),
+        rainfall_max_mm=float(rainfall_dataframe["rainfall_mm"].max()),
+        rainfall_mean_mm=float(rainfall_dataframe["rainfall_mm"].mean()),
+        cells=cells,
+    )
+
+
 @router.get(
     "/assam/field",
     response_model=RainfallFieldResponse,
@@ -128,42 +173,69 @@ def get_assam_rainfall_field(
     dataset = xr.open_dataset(ASSAM_RAINFALL_NETCDF_FILE)
 
     try:
-        rainfall_field = dataset["RAINFALL"].sel(TIME=str(selected_date))
-    except KeyError as error:
+        response = build_rainfall_field_response(dataset, selected_date)
+    finally:
         dataset.close()
-        raise HTTPException(
-            status_code=404,
-            detail=f"No rainfall data found for date: {selected_date}",
-        ) from error
-
-    rainfall_dataframe = (
-        rainfall_field
-        .to_dataframe(name="rainfall_mm")
-        .reset_index()
-        .dropna(subset=["rainfall_mm"])
-    )
-
-    cells = [
-        RainfallFieldCell(
-            latitude=float(row["LATITUDE"]),
-            longitude=float(row["LONGITUDE"]),
-            rainfall_mm=float(row["rainfall_mm"]),
-        )
-        for _, row in rainfall_dataframe.iterrows()
-    ]
-
-    response = RainfallFieldResponse(
-        region="assam",
-        date=selected_date,
-        variable="rainfall",
-        unit="mm/day",
-        cell_count=len(cells),
-        rainfall_min_mm=float(rainfall_dataframe["rainfall_mm"].min()),
-        rainfall_max_mm=float(rainfall_dataframe["rainfall_mm"].max()),
-        rainfall_mean_mm=float(rainfall_dataframe["rainfall_mm"].mean()),
-        cells=cells,
-    )
-
-    dataset.close()
 
     return response
+
+
+@router.get(
+    "/assam/field-sequence",
+    response_model=RainfallFieldSequenceResponse,
+    summary="Get Assam rainfall field sequence for animation",
+)
+def get_assam_rainfall_field_sequence(
+    start_date: date = Query(
+        default=date(2025, 5, 24),
+        description="Start date in YYYY-MM-DD format",
+    ),
+    end_date: date = Query(
+        default=date(2025, 6, 7),
+        description="End date in YYYY-MM-DD format",
+    ),
+) -> RainfallFieldSequenceResponse:
+    if start_date > end_date:
+        raise HTTPException(
+            status_code=400,
+            detail="start_date cannot be after end_date.",
+        )
+
+    day_count = (end_date - start_date).days + 1
+
+    if day_count > 31:
+        raise HTTPException(
+            status_code=400,
+            detail="Maximum supported sequence length is 31 days.",
+        )
+
+    if not ASSAM_RAINFALL_NETCDF_FILE.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Rainfall NetCDF file not found: {ASSAM_RAINFALL_NETCDF_FILE}",
+        )
+
+    dataset = xr.open_dataset(ASSAM_RAINFALL_NETCDF_FILE)
+
+    try:
+        fields: list[RainfallFieldResponse] = []
+
+        for day_index in range(day_count):
+            current_date = start_date + timedelta(days=day_index)
+            field_response = build_rainfall_field_response(
+                dataset=dataset,
+                selected_date=current_date,
+            )
+            fields.append(field_response)
+    finally:
+        dataset.close()
+
+    return RainfallFieldSequenceResponse(
+        region="assam",
+        start_date=start_date,
+        end_date=end_date,
+        variable="rainfall",
+        unit="mm/day",
+        day_count=len(fields),
+        fields=fields,
+    )

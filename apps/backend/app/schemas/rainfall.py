@@ -12,6 +12,7 @@ class DailyRainfallSummary(BaseModel):
     month: int
     day_of_year: int
 
+
 class MonthlyRainfallSummary(BaseModel):
     month: int
     rainfall_mean_of_daily_mean_mm: float
@@ -20,6 +21,7 @@ class MonthlyRainfallSummary(BaseModel):
     valid_grid_cell_count_mean: float
     rainy_days: int
     heavy_rain_days: int
+
 
 class RainfallFieldCell(BaseModel):
     latitude: float
@@ -37,3 +39,13 @@ class RainfallFieldResponse(BaseModel):
     rainfall_max_mm: float
     rainfall_mean_mm: float
     cells: list[RainfallFieldCell]
+
+
+class RainfallFieldSequenceResponse(BaseModel):
+    region: str
+    start_date: date
+    end_date: date
+    variable: str
+    unit: str
+    day_count: int
+    fields: list[RainfallFieldResponse]

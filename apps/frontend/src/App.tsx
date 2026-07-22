@@ -3,10 +3,12 @@ import { useEffect, useMemo, useState } from "react";
 import { MonthlyRainfallBarChart } from "./components/charts/MonthlyRainfallBarChart";
 import { RainfallLineChart } from "./components/charts/RainfallLineChart";
 import { RainfallFieldPreview } from "./components/map/RainfallFieldPreview";
+import { RainfallMap } from "./components/map/RainfallMap";
 import {
   getAssamDailyRainfallSummary,
   getAssamMonthlyRainfallSummary,
   getAssamRainfallField,
+  getAssamRainfallFieldSequence,
   getHealthStatus,
   type DailyRainfallSummary,
   type HealthResponse,
@@ -24,8 +26,16 @@ function App() {
   const [rainfallField, setRainfallField] =
     useState<RainfallFieldResponse | null>(null);
 
+  const [fieldSequence, setFieldSequence] = useState<
+    RainfallFieldResponse[]
+  >([]);
+
   const [selectedFieldDate, setSelectedFieldDate] = useState("2025-05-30");
+  const [sequenceStartDate, setSequenceStartDate] = useState("2025-05-24");
+  const [sequenceEndDate, setSequenceEndDate] = useState("2025-06-07");
+
   const [isFieldLoading, setIsFieldLoading] = useState(false);
+  const [isSequenceLoading, setIsSequenceLoading] = useState(false);
   const [isPlayingFieldAnimation, setIsPlayingFieldAnimation] =
     useState(false);
 
@@ -42,17 +52,20 @@ function App() {
           rainfallResult,
           monthlyRainfallResult,
           rainfallFieldResult,
+          rainfallSequenceResult,
         ] = await Promise.all([
           getHealthStatus(),
           getAssamDailyRainfallSummary(),
           getAssamMonthlyRainfallSummary(),
           getAssamRainfallField("2025-05-30"),
+          getAssamRainfallFieldSequence("2025-05-24", "2025-06-07"),
         ]);
 
         setHealth(healthResult);
         setRainfall(rainfallResult);
         setMonthlyRainfall(monthlyRainfallResult);
         setRainfallField(rainfallFieldResult);
+        setFieldSequence(rainfallSequenceResult.fields);
       } catch (requestError) {
         setError(
           requestError instanceof Error
@@ -71,6 +84,7 @@ function App() {
       setSelectedFieldDate(dateValue);
       setIsFieldLoading(true);
       setError(null);
+      setIsPlayingFieldAnimation(false);
 
       const rainfallFieldResult = await getAssamRainfallField(dateValue);
 
@@ -87,60 +101,99 @@ function App() {
   }
 
 
-  function shiftDate(dateValue: string, dayOffset: number): string {
-    const currentDate = new Date(dateValue);
-    currentDate.setDate(currentDate.getDate() + dayOffset);
+  async function handleLoadSequence(): Promise<void> {
+    try {
+      setIsSequenceLoading(true);
+      setIsPlayingFieldAnimation(false);
+      setError(null);
 
-    const minDate = new Date("2025-01-01");
-    const maxDate = new Date("2025-12-31");
+      const sequenceResult = await getAssamRainfallFieldSequence(
+        sequenceStartDate,
+        sequenceEndDate
+      );
 
-    if (currentDate < minDate) {
-      return "2025-01-01";
+      setFieldSequence(sequenceResult.fields);
+
+      if (sequenceResult.fields.length > 0) {
+        const firstField = sequenceResult.fields[0];
+        setRainfallField(firstField);
+        setSelectedFieldDate(firstField.date);
+      }
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unknown rainfall sequence error"
+      );
+    } finally {
+      setIsSequenceLoading(false);
     }
-
-    if (currentDate > maxDate) {
-      return "2025-12-31";
-    }
-
-    return currentDate.toISOString().slice(0, 10);
   }
 
 
-  async function handlePreviousFieldDay(): Promise<void> {
-    const previousDate = shiftDate(selectedFieldDate, -1);
-    await handleFieldDateChange(previousDate);
+  function getCurrentSequenceIndex(): number {
+    return fieldSequence.findIndex(
+      (field) => field.date === selectedFieldDate
+    );
   }
 
 
-  async function handleNextFieldDay(): Promise<void> {
-    const nextDate = shiftDate(selectedFieldDate, 1);
-    await handleFieldDateChange(nextDate);
+  function showSequenceField(index: number): void {
+    const field = fieldSequence[index];
+
+    if (!field) {
+      return;
+    }
+
+    setRainfallField(field);
+    setSelectedFieldDate(field.date);
+  }
+
+
+  function handlePreviousSequenceFrame(): void {
+    const currentIndex = getCurrentSequenceIndex();
+
+    if (currentIndex <= 0) {
+      return;
+    }
+
+    setIsPlayingFieldAnimation(false);
+    showSequenceField(currentIndex - 1);
+  }
+
+
+  function handleNextSequenceFrame(): void {
+    const currentIndex = getCurrentSequenceIndex();
+
+    if (currentIndex < 0 || currentIndex >= fieldSequence.length - 1) {
+      return;
+    }
+
+    setIsPlayingFieldAnimation(false);
+    showSequenceField(currentIndex + 1);
   }
 
 
   useEffect(() => {
-    if (!isPlayingFieldAnimation) {
+    if (!isPlayingFieldAnimation || fieldSequence.length === 0) {
       return;
     }
 
     const intervalId = window.setInterval(() => {
-      setSelectedFieldDate((currentDate) => {
-        const nextDate = shiftDate(currentDate, 1);
+      const currentIndex = getCurrentSequenceIndex();
 
-        if (nextDate === currentDate || nextDate === "2025-12-31") {
-          setIsPlayingFieldAnimation(false);
-        }
+      if (currentIndex < 0 || currentIndex >= fieldSequence.length - 1) {
+        setIsPlayingFieldAnimation(false);
+        return;
+      }
 
-        void handleFieldDateChange(nextDate);
-
-        return nextDate;
-      });
-    }, 900);
+      showSequenceField(currentIndex + 1);
+    }, 500);
 
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [isPlayingFieldAnimation]);
+  }, [isPlayingFieldAnimation, selectedFieldDate, fieldSequence]);
 
 
   const rainfallStats = useMemo(() => {
@@ -171,6 +224,8 @@ function App() {
   }, [rainfall]);
 
 
+  const currentSequenceIndex = getCurrentSequenceIndex();
+
   return (
     <main
       style={{
@@ -183,7 +238,7 @@ function App() {
     >
       <section
         style={{
-          maxWidth: "1200px",
+          maxWidth: "1440px",
           margin: "0 auto",
         }}
       >
@@ -213,8 +268,8 @@ function App() {
               lineHeight: 1.6,
             }}
           >
-            First frontend milestone using real IMD rainfall data processed
-            through the ClimateTwin pipeline.
+            Real IMD rainfall data processed through the ClimateTwin pipeline,
+            served through FastAPI, and visualized in React.
           </p>
         </header>
 
@@ -297,21 +352,42 @@ function App() {
                 borderRadius: "16px",
                 padding: "20px",
                 marginBottom: "16px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: "16px",
-                flexWrap: "wrap",
               }}
             >
-              <div>
-                <h3 style={{ margin: 0 }}>
-                  Spatial Rainfall State
-                </h3>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  gap: "16px",
+                  flexWrap: "wrap",
+                  marginBottom: "20px",
+                }}
+              >
+                <div>
+                  <h3 style={{ margin: 0 }}>
+                    Spatial Rainfall State Animation
+                  </h3>
 
-                <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
-                  Select a date or play the rainfall field animation.
-                </p>
+                  <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
+                    Preload a date range, then animate rainfall fields from
+                    frontend memory.
+                  </p>
+                </div>
+
+                <div
+                  style={{
+                    color: "#4b5563",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                  }}
+                >
+                  {fieldSequence.length > 0 && currentSequenceIndex >= 0
+                    ? `Frame ${
+                        currentSequenceIndex + 1
+                      } / ${fieldSequence.length}`
+                    : "No sequence loaded"}
+                </div>
               </div>
 
               <div
@@ -322,72 +398,81 @@ function App() {
                   flexWrap: "wrap",
                 }}
               >
-                <button
-                  type="button"
-                  onClick={() => {
-                    void handlePreviousFieldDay();
-                  }}
-                  disabled={
-                    isFieldLoading || selectedFieldDate === "2025-01-01"
-                  }
-                  style={{
-                    padding: "10px 12px",
-                    border: "1px solid #d1d5db",
-                    borderRadius: "10px",
-                    background: "#ffffff",
-                    cursor: "pointer",
-                  }}
-                >
-                  Previous
-                </button>
-
                 <div>
                   <label
-                    htmlFor="field-date"
-                    style={{
-                      display: "block",
-                      marginBottom: "6px",
-                      color: "#374151",
-                      fontSize: "14px",
-                      fontWeight: 600,
-                    }}
+                    htmlFor="sequence-start-date"
+                    style={labelStyle}
                   >
-                    Date
+                    Start date
                   </label>
 
                   <input
-                    id="field-date"
+                    id="sequence-start-date"
                     type="date"
                     min="2025-01-01"
                     max="2025-12-31"
-                    value={selectedFieldDate}
+                    value={sequenceStartDate}
                     onChange={(event) => {
-                      void handleFieldDateChange(event.target.value);
+                      setSequenceStartDate(event.target.value);
                     }}
-                    style={{
-                      padding: "10px 12px",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "10px",
-                      fontSize: "14px",
+                    style={inputStyle}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="sequence-end-date"
+                    style={labelStyle}
+                  >
+                    End date
+                  </label>
+
+                  <input
+                    id="sequence-end-date"
+                    type="date"
+                    min="2025-01-01"
+                    max="2025-12-31"
+                    value={sequenceEndDate}
+                    onChange={(event) => {
+                      setSequenceEndDate(event.target.value);
                     }}
+                    style={inputStyle}
                   />
                 </div>
 
                 <button
                   type="button"
                   onClick={() => {
-                    void handleNextFieldDay();
+                    void handleLoadSequence();
                   }}
+                  disabled={isSequenceLoading}
+                  style={secondaryButtonStyle}
+                >
+                  {isSequenceLoading ? "Loading..." : "Load sequence"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePreviousSequenceFrame}
                   disabled={
-                    isFieldLoading || selectedFieldDate === "2025-12-31"
+                    isFieldLoading ||
+                    fieldSequence.length === 0 ||
+                    currentSequenceIndex <= 0
                   }
-                  style={{
-                    padding: "10px 12px",
-                    border: "1px solid #d1d5db",
-                    borderRadius: "10px",
-                    background: "#ffffff",
-                    cursor: "pointer",
-                  }}
+                  style={secondaryButtonStyle}
+                >
+                  Previous
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleNextSequenceFrame}
+                  disabled={
+                    isFieldLoading ||
+                    fieldSequence.length === 0 ||
+                    currentSequenceIndex >= fieldSequence.length - 1
+                  }
+                  style={secondaryButtonStyle}
                 >
                   Next
                 </button>
@@ -397,7 +482,12 @@ function App() {
                   onClick={() => {
                     setIsPlayingFieldAnimation((current) => !current);
                   }}
-                  disabled={isFieldLoading}
+                  disabled={
+                    isFieldLoading ||
+                    isSequenceLoading ||
+                    fieldSequence.length === 0 ||
+                    currentSequenceIndex >= fieldSequence.length - 1
+                  }
                   style={{
                     padding: "10px 14px",
                     border: "1px solid #2563eb",
@@ -412,6 +502,27 @@ function App() {
                 >
                   {isPlayingFieldAnimation ? "Pause" : "Play"}
                 </button>
+
+                <div>
+                  <label
+                    htmlFor="single-field-date"
+                    style={labelStyle}
+                  >
+                    Single date
+                  </label>
+
+                  <input
+                    id="single-field-date"
+                    type="date"
+                    min="2025-01-01"
+                    max="2025-12-31"
+                    value={selectedFieldDate}
+                    onChange={(event) => {
+                      void handleFieldDateChange(event.target.value);
+                    }}
+                    style={inputStyle}
+                  />
+                </div>
               </div>
             </div>
 
@@ -427,7 +538,10 @@ function App() {
                 Loading rainfall field...
               </section>
             ) : (
-              <RainfallFieldPreview data={rainfallField} />
+              <>
+                <RainfallMap data={rainfallField} />
+                <RainfallFieldPreview data={rainfallField} />
+              </>
             )}
           </section>
         )}
@@ -495,6 +609,37 @@ function MetricCard({ label, value }: MetricCardProps) {
     </div>
   );
 }
+
+
+const labelStyle = {
+  display: "block",
+  marginBottom: "6px",
+  color: "#374151",
+  fontSize: "14px",
+  fontWeight: 600,
+};
+
+
+const inputStyle = {
+  padding: "10px 12px",
+  border: "1px solid #d1d5db",
+  borderRadius: "10px",
+  fontSize: "14px",
+  color: "#111827",
+  background: "#ffffff",
+};
+
+
+const secondaryButtonStyle = {
+  padding: "10px 12px",
+  border: "1px solid #d1d5db",
+  borderRadius: "10px",
+  background: "#ffffff",
+  color: "#111827",
+  cursor: "pointer",
+  fontWeight: 600,
+  minWidth: "96px",
+};
 
 
 export default App;
