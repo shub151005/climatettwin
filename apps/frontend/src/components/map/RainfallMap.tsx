@@ -10,7 +10,8 @@ import type {
   Polygon,
 } from "geojson";
 
-import assamBoundary from "../../data/geojson/assam-boundary.json";
+import assamDistrictBoundaries from "../../data/geojson/assam-district-boundaries.json";
+import assamOuterBoundary from "../../data/geojson/assam-outer-boundary.json";
 import type { RainfallFieldResponse } from "../../services/api";
 
 
@@ -33,7 +34,11 @@ type RainfallFeatureCollection = FeatureCollection<
 
 const GRID_SIZE_DEGREES = 0.25;
 
-const assamBoundaryGeoJson = assamBoundary as FeatureCollection<Geometry>;
+const assamDistrictBoundariesGeoJson =
+  assamDistrictBoundaries as FeatureCollection<Geometry>;
+
+const assamOuterBoundaryGeoJson =
+  assamOuterBoundary as FeatureCollection<Geometry>;
 
 
 function getRainfallCategory(value: number): string {
@@ -159,14 +164,19 @@ export function RainfallMap({ data }: RainfallMapProps) {
     );
 
     map.on("load", () => {
-      map.addSource("assam-boundary", {
-        type: "geojson",
-        data: assamBoundaryGeoJson,
-      });
-
       map.addSource("rainfall-field", {
         type: "geojson",
         data: rainfallGeoJson,
+      });
+
+      map.addSource("assam-district-boundaries", {
+        type: "geojson",
+        data: assamDistrictBoundariesGeoJson,
+      });
+
+      map.addSource("assam-outer-boundary", {
+        type: "geojson",
+        data: assamOuterBoundaryGeoJson,
       });
 
       map.addLayer({
@@ -197,29 +207,30 @@ export function RainfallMap({ data }: RainfallMapProps) {
         type: "line",
         source: "rainfall-field",
         paint: {
-          "line-color": "rgba(255,255,255,0.35)",
-          "line-width": 0.35,
+          "line-color": "rgba(255,255,255,0.25)",
+          "line-width": 0.25,
         },
       });
 
       map.addLayer({
-        id: "assam-boundary-fill",
-        type: "fill",
-        source: "assam-boundary",
-        paint: {
-          "fill-color": "rgba(255,255,255,0)",
-          "fill-opacity": 0,
-        },
-      });
-
-      map.addLayer({
-        id: "assam-boundary-outline",
+        id: "assam-district-boundaries-line",
         type: "line",
-        source: "assam-boundary",
+        source: "assam-district-boundaries",
+        paint: {
+          "line-color": "rgba(17, 24, 39, 0.45)",
+          "line-width": 0.8,
+          "line-opacity": 0.75,
+        },
+      });
+
+      map.addLayer({
+        id: "assam-outer-boundary-line",
+        type: "line",
+        source: "assam-outer-boundary",
         paint: {
           "line-color": "#111827",
-          "line-width": 2.8,
-          "line-opacity": 0.95,
+          "line-width": 3.2,
+          "line-opacity": 0.98,
         },
       });
 
