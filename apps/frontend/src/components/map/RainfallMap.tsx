@@ -6,9 +6,11 @@ import type {
 } from "maplibre-gl";
 import type {
   FeatureCollection,
+  Geometry,
   Polygon,
 } from "geojson";
 
+import assamBoundary from "../../data/geojson/assam-boundary.json";
 import type { RainfallFieldResponse } from "../../services/api";
 
 
@@ -30,6 +32,8 @@ type RainfallFeatureCollection = FeatureCollection<
 
 
 const GRID_SIZE_DEGREES = 0.25;
+
+const assamBoundaryGeoJson = assamBoundary as FeatureCollection<Geometry>;
 
 
 function getRainfallCategory(value: number): string {
@@ -126,12 +130,11 @@ export function RainfallMap({ data }: RainfallMapProps) {
           carto: {
             type: "raster",
             tiles: [
-            "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+              "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
             ],
             tileSize: 256,
-            attribution:
-            "© OpenStreetMap contributors © CARTO",
-            },
+            attribution: "© OpenStreetMap contributors © CARTO",
+          },
         },
         layers: [
           {
@@ -143,9 +146,9 @@ export function RainfallMap({ data }: RainfallMapProps) {
       },
       center: [93.5, 26.2],
       zoom: 6.4,
-      attributionControl:{
+      attributionControl: {
         compact: true,
-        },
+      },
     });
 
     map.addControl(
@@ -156,6 +159,11 @@ export function RainfallMap({ data }: RainfallMapProps) {
     );
 
     map.on("load", () => {
+      map.addSource("assam-boundary", {
+        type: "geojson",
+        data: assamBoundaryGeoJson,
+      });
+
       map.addSource("rainfall-field", {
         type: "geojson",
         data: rainfallGeoJson,
@@ -189,8 +197,29 @@ export function RainfallMap({ data }: RainfallMapProps) {
         type: "line",
         source: "rainfall-field",
         paint: {
-          "line-color": "rgba(255,255,255,0.55)",
-          "line-width": 0.4,
+          "line-color": "rgba(255,255,255,0.35)",
+          "line-width": 0.35,
+        },
+      });
+
+      map.addLayer({
+        id: "assam-boundary-fill",
+        type: "fill",
+        source: "assam-boundary",
+        paint: {
+          "fill-color": "rgba(255,255,255,0)",
+          "fill-opacity": 0,
+        },
+      });
+
+      map.addLayer({
+        id: "assam-boundary-outline",
+        type: "line",
+        source: "assam-boundary",
+        paint: {
+          "line-color": "#111827",
+          "line-width": 2.8,
+          "line-opacity": 0.95,
         },
       });
 
@@ -240,20 +269,23 @@ export function RainfallMap({ data }: RainfallMapProps) {
     >
       <div style={{ marginBottom: "16px" }}>
         <h3
-         style={{
-          margin: 0,
-          fontSize: "22px",
-          fontWeight: 800,
-         }}
+          style={{
+            margin: 0,
+            fontSize: "22px",
+            fontWeight: 800,
+          }}
         >
-  MapLibre Rainfall Layer — Assam
-</h3>
+          MapLibre Rainfall Layer — Assam
+        </h3>
 
-        <p style={{ margin: "8px 0 0",
-                    color: "#4b5563",
-                    fontSize: "15px",
-                    fontWeight: 500,
-                    }}>
+        <p
+          style={{
+            margin: "8px 0 0",
+            color: "#4b5563",
+            fontSize: "15px",
+            fontWeight: 500,
+          }}
+        >
           {data.date} · {data.cell_count} valid grid cells · Mean{" "}
           {data.rainfall_mean_mm.toFixed(2)} mm/day · Max{" "}
           {data.rainfall_max_mm.toFixed(2)} mm/day
