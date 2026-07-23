@@ -44,7 +44,7 @@ ASSAM_RAINFALL_NETCDF_FILE = (
     / "processed"
     / "imd"
     / "rainfall"
-    / "assam_rainfall_2025_bbox.nc"
+    / "assam_rainfall_2025_clipped.nc"
 )
 
 
