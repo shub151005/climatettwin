@@ -27,7 +27,7 @@ DAILY_SUMMARY_FILE = (
     / "data"
     / "derived"
     / "assam"
-    / "assam_rainfall_daily_summary_2025.csv"
+    / "assam_rainfall_daily_summary_2025_clipped.csv"
 )
 
 MONTHLY_SUMMARY_FILE = (
@@ -35,7 +35,7 @@ MONTHLY_SUMMARY_FILE = (
     / "data"
     / "derived"
     / "assam"
-    / "assam_rainfall_monthly_summary_2025.csv"
+    / "assam_rainfall_monthly_summary_2025_clipped.csv"
 )
 
 ASSAM_RAINFALL_NETCDF_FILE = (

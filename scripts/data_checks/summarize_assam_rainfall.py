@@ -13,13 +13,13 @@ INPUT_FILE = (
     / "processed"
     / "imd"
     / "rainfall"
-    / "assam_rainfall_2025_bbox.nc"
+    / "assam_rainfall_2025_clipped.nc"
 )
 
 OUTPUT_DIR = PROJECT_ROOT / "data" / "derived" / "assam"
 
-DAILY_OUTPUT = OUTPUT_DIR / "assam_rainfall_daily_summary_2025.csv"
-MONTHLY_OUTPUT = OUTPUT_DIR / "assam_rainfall_monthly_summary_2025.csv"
+DAILY_OUTPUT = OUTPUT_DIR / "assam_rainfall_daily_summary_2025_clipped.csv"
+MONTHLY_OUTPUT = OUTPUT_DIR / "assam_rainfall_monthly_summary_2025_clipped.csv"
 
 
 def summarize_daily(dataset: xr.Dataset) -> pd.DataFrame:

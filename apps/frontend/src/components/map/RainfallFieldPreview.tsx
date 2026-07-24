@@ -130,7 +130,7 @@ export function RainfallFieldPreview({ data }: RainfallFieldPreviewProps) {
                        fontSize: "22px",
                        fontWeight: 800,
                       }}>
-            Rainfall Field Preview — Assam Bounding Box
+            Rainfall Field Preview — Assam Boundary-Clipped Field
           </h3>
 
           <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
@@ -232,8 +232,7 @@ export function RainfallFieldPreview({ data }: RainfallFieldPreviewProps) {
           fontSize: "15px",
         }}
       >
-        This is a grid-based rainfall field preview. The final map will use
-        proper geospatial boundaries, basemap tiles, and layer controls.
+        This is a boundary-clipped rainfall field preview using Assam grid cells retained inside the state boundary.
       </p>
     </section>
   );
