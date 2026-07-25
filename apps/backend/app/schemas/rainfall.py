@@ -49,3 +49,17 @@ class RainfallFieldSequenceResponse(BaseModel):
     unit: str
     day_count: int
     fields: list[RainfallFieldResponse]
+
+class RainfallMetadataResponse(BaseModel):
+    region: str
+    variable: str
+    unit: str
+    start_date: date
+    end_date: date
+    day_count: int
+    latitude_count: int
+    longitude_count: int
+    total_grid_cells: int
+    average_valid_grid_cells_per_day: float
+    processing_level: str
+    source_file: str

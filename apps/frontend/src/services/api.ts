@@ -1,5 +1,4 @@
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000/api/v1";
+const API_BASE_URL = "http://127.0.0.1:8000";
 
 
 export interface HealthResponse {
@@ -20,6 +19,18 @@ export interface DailyRainfallSummary {
   day_of_year: number;
 }
 
+
+export interface MonthlyRainfallSummary {
+  month: number;
+  rainfall_mean_of_daily_mean_mm: number;
+  rainfall_total_mean_mm: number;
+  rainfall_max_mm: number;
+  valid_grid_cell_count_mean: number;
+  rainy_days: number;
+  heavy_rain_days: number;
+}
+
+
 export interface RainfallFieldCell {
   latitude: number;
   longitude: number;
@@ -39,6 +50,7 @@ export interface RainfallFieldResponse {
   cells: RainfallFieldCell[];
 }
 
+
 export interface RainfallFieldSequenceResponse {
   region: string;
   start_date: string;
@@ -49,90 +61,89 @@ export interface RainfallFieldSequenceResponse {
   fields: RainfallFieldResponse[];
 }
 
-export async function getHealthStatus(): Promise<HealthResponse> {
-  const response = await fetch(`${API_BASE_URL}/health`);
+
+export interface RainfallMetadataResponse {
+  region: string;
+  variable: string;
+  unit: string;
+  start_date: string;
+  end_date: string;
+  day_count: number;
+  latitude_count: number;
+  longitude_count: number;
+  total_grid_cells: number;
+  average_valid_grid_cells_per_day: number;
+  processing_level: string;
+  source_file: string;
+}
+
+
+async function fetchJson<T>(url: string): Promise<T> {
+  const response = await fetch(url);
 
   if (!response.ok) {
     throw new Error(
-      `Health request failed with status ${response.status}`
+      `Request failed with status ${response.status}: ${url}`
     );
   }
 
-  return response.json() as Promise<HealthResponse>;
+  return response.json() as Promise<T>;
+}
+
+
+export async function getHealthStatus(): Promise<HealthResponse> {
+  return fetchJson<HealthResponse>(`${API_BASE_URL}/api/v1/health`);
+}
+
+
+export async function getAssamRainfallMetadata(): Promise<RainfallMetadataResponse> {
+  return fetchJson<RainfallMetadataResponse>(
+    `${API_BASE_URL}/api/v1/rainfall/assam/metadata`
+  );
 }
 
 
 export async function getAssamDailyRainfallSummary(): Promise<
   DailyRainfallSummary[]
 > {
-  const response = await fetch(
-    `${API_BASE_URL}/rainfall/assam/daily-summary`
+  return fetchJson<DailyRainfallSummary[]>(
+    `${API_BASE_URL}/api/v1/rainfall/assam/daily-summary`
   );
-
-  if (!response.ok) {
-    throw new Error(
-      `Rainfall summary request failed with status ${response.status}`
-    );
-  }
-
-  return response.json() as Promise<DailyRainfallSummary[]>;
 }
 
-export interface MonthlyRainfallSummary {
-  month: number;
-  rainfall_mean_of_daily_mean_mm: number;
-  rainfall_total_mean_mm: number;
-  rainfall_max_mm: number;
-  valid_grid_cell_count_mean: number;
-  rainy_days: number;
-  heavy_rain_days: number;
-}
 
 export async function getAssamMonthlyRainfallSummary(): Promise<
   MonthlyRainfallSummary[]
 > {
-  const response = await fetch(
-    `${API_BASE_URL}/rainfall/assam/monthly-summary`
+  return fetchJson<MonthlyRainfallSummary[]>(
+    `${API_BASE_URL}/api/v1/rainfall/assam/monthly-summary`
   );
-
-  if (!response.ok) {
-    throw new Error(
-      `Monthly rainfall summary request failed with status ${response.status}`
-    );
-  }
-
-  return response.json() as Promise<MonthlyRainfallSummary[]>;
 }
+
 
 export async function getAssamRainfallField(
   selectedDate = "2025-05-30"
 ): Promise<RainfallFieldResponse> {
-  const response = await fetch(
-    `${API_BASE_URL}/rainfall/assam/field?selected_date=${selectedDate}`
+  const searchParams = new URLSearchParams({
+    selected_date: selectedDate,
+  });
+
+  return fetchJson<RainfallFieldResponse>(
+    `${API_BASE_URL}/api/v1/rainfall/assam/field?${searchParams.toString()}`
   );
-
-  if (!response.ok) {
-    throw new Error(
-      `Rainfall field request failed with status ${response.status}`
-    );
-  }
-
-  return response.json() as Promise<RainfallFieldResponse>;
 }
+
 
 export async function getAssamRainfallFieldSequence(
   startDate = "2025-05-24",
   endDate = "2025-06-07"
 ): Promise<RainfallFieldSequenceResponse> {
-  const response = await fetch(
-    `${API_BASE_URL}/rainfall/assam/field-sequence?start_date=${startDate}&end_date=${endDate}`
+  const searchParams = new URLSearchParams({
+    start_date: startDate,
+    end_date: endDate,
+  });
+
+  return fetchJson<RainfallFieldSequenceResponse>(
+    `${API_BASE_URL}/api/v1/rainfall/assam/field-sequence?${searchParams.toString()}`
   );
-
-  if (!response.ok) {
-    throw new Error(
-      `Rainfall field sequence request failed with status ${response.status}`
-    );
-  }
-
-  return response.json() as Promise<RainfallFieldSequenceResponse>;
 }
