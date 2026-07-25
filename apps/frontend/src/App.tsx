@@ -136,6 +136,46 @@ function App() {
     return fieldSequence.findIndex((field) => field.date === rainfallField.date);
   }
 
+  function clampDateToMetadata(dateValue: Date): string {
+    const isoDate = dateValue.toISOString().slice(0, 10);
+
+    if (!rainfallMetadata) {
+      return isoDate;
+    }
+
+    if (isoDate < rainfallMetadata.start_date) {
+      return rainfallMetadata.start_date;
+    }
+
+    if (isoDate > rainfallMetadata.end_date) {
+      return rainfallMetadata.end_date;
+    }
+
+    return isoDate;
+  }
+
+  function getPeakRainfallSequenceWindow(): {
+    startDate: string;
+    endDate: string;
+  } | null {
+    if (!rainfallStats.maxRainfallDay) {
+      return null;
+    }
+
+    const peakDate = new Date(rainfallStats.maxRainfallDay.date);
+
+    const startDate = new Date(peakDate);
+    startDate.setDate(startDate.getDate() - 7);
+
+    const endDate = new Date(peakDate);
+    endDate.setDate(endDate.getDate() + 7);
+
+    return {
+      startDate: clampDateToMetadata(startDate),
+      endDate: clampDateToMetadata(endDate),
+    };
+  }
+
   async function handleFieldDateChange(dateValue: string) {
     try {
       setError(null);
@@ -157,17 +197,19 @@ function App() {
     }
   }
 
-  async function handleLoadSequence() {
+  async function loadSequence(startDate: string, endDate: string) {
     try {
       setError(null);
       setIsSequenceLoading(true);
       setIsPlayingFieldAnimation(false);
 
       const sequenceData = await getAssamRainfallFieldSequence(
-        sequenceStartDate,
-        sequenceEndDate
+        startDate,
+        endDate
       );
 
+      setSequenceStartDate(startDate);
+      setSequenceEndDate(endDate);
       setFieldSequence(sequenceData.fields);
 
       if (sequenceData.fields.length > 0) {
@@ -185,6 +227,28 @@ function App() {
     } finally {
       setIsSequenceLoading(false);
     }
+  }
+
+  async function handleLoadSequence() {
+    await loadSequence(sequenceStartDate, sequenceEndDate);
+  }
+
+  async function handleShowPeakRainfallDay() {
+    if (!rainfallStats.maxRainfallDay) {
+      return;
+    }
+
+    await handleFieldDateChange(rainfallStats.maxRainfallDay.date);
+  }
+
+  async function handleLoadPeakRainfallSequence() {
+    const peakWindow = getPeakRainfallSequenceWindow();
+
+    if (!peakWindow) {
+      return;
+    }
+
+    await loadSequence(peakWindow.startDate, peakWindow.endDate);
   }
 
   function showSequenceField(index: number) {
@@ -255,6 +319,7 @@ function App() {
   }, [isPlayingFieldAnimation, fieldSequence]);
 
   const currentSequenceIndex = getCurrentSequenceIndex();
+  const peakRainfallSequenceWindow = getPeakRainfallSequenceWindow();
 
   return (
     <main
@@ -391,6 +456,17 @@ function App() {
                 {rainfallStats.maxRainfallDay.rainfall_max_mm.toFixed(2)} mm
               </strong>
               .
+              {peakRainfallSequenceWindow && (
+                <>
+                  {" "}
+                  Suggested event window:{" "}
+                  <strong>
+                    {peakRainfallSequenceWindow.startDate} →{" "}
+                    {peakRainfallSequenceWindow.endDate}
+                  </strong>
+                  .
+                </>
+              )}
             </p>
           </section>
         )}
@@ -454,6 +530,23 @@ function App() {
                   valid Assam cells/day · {rainfallMetadata.processing_level}
                 </p>
               )}
+
+              {rainfallStats.maxRainfallDay && (
+                <p
+                  style={{
+                    margin: "6px 0 0",
+                    color: "#4b5563",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                  }}
+                >
+                  Peak rainfall day: {rainfallStats.maxRainfallDay.date} ·{" "}
+                  {rainfallStats.maxRainfallDay.rainfall_mean_mm.toFixed(2)} mm
+                  regional mean ·{" "}
+                  {rainfallStats.maxRainfallDay.rainfall_max_mm.toFixed(2)} mm
+                  max grid-cell rainfall
+                </p>
+              )}
             </div>
 
             <p
@@ -509,6 +602,34 @@ function App() {
               style={secondaryButtonStyle}
             >
               {isSequenceLoading ? "Loading..." : "Load sequence"}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleShowPeakRainfallDay}
+              disabled={!rainfallStats.maxRainfallDay || isFieldLoading}
+              style={{
+                ...secondaryButtonStyle,
+                background: "#111827",
+                color: "#ffffff",
+                borderColor: "#111827",
+              }}
+            >
+              Peak rainfall day
+            </button>
+
+            <button
+              type="button"
+              onClick={handleLoadPeakRainfallSequence}
+              disabled={!peakRainfallSequenceWindow || isSequenceLoading}
+              style={{
+                ...secondaryButtonStyle,
+                background: "#064e3b",
+                color: "#ffffff",
+                borderColor: "#064e3b",
+              }}
+            >
+              Peak sequence
             </button>
 
             <button
