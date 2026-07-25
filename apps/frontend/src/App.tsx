@@ -591,7 +591,7 @@ function App() {
           </section>
         )}
 
-        <RainfallLineChart data={rainfall} />
+        <RainfallLineChart data={rainfall} anomalies={rainfallAnomalies} />
 
         <MonthlyRainfallBarChart data={monthlyRainfall} />
 
