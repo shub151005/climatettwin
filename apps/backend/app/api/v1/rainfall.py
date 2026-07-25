@@ -11,6 +11,7 @@ from app.schemas.rainfall import (
     RainfallFieldResponse,
     RainfallFieldSequenceResponse,
     RainfallMetadataResponse,
+    DailyRainfallAnomaly
 )
 
 
@@ -32,6 +33,14 @@ MONTHLY_SUMMARY_FILE = (
     / "derived"
     / "assam"
     / "assam_rainfall_monthly_summary_2025_clipped.csv"
+)
+
+DAILY_ANOMALY_FILE = (
+    PROJECT_ROOT
+    / "data"
+    / "derived"
+    / "assam"
+    / "assam_rainfall_daily_anomalies_2025_clipped.csv"
 )
 
 ASSAM_RAINFALL_NETCDF_FILE = (
@@ -114,6 +123,25 @@ def get_assam_daily_rainfall_summary() -> list[DailyRainfallSummary]:
 
     return [
         DailyRainfallSummary(**record)
+        for record in dataframe.to_dict(orient="records")
+    ]
+
+@router.get(
+    "/rainfall/assam/daily-anomalies",
+    response_model=list[DailyRainfallAnomaly],
+)
+def get_assam_daily_rainfall_anomalies() -> list[DailyRainfallAnomaly]:
+    if not DAILY_ANOMALY_FILE.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Daily anomaly file not found: {DAILY_ANOMALY_FILE}",
+        )
+
+    dataframe = pd.read_csv(DAILY_ANOMALY_FILE)
+    dataframe["date"] = pd.to_datetime(dataframe["date"]).dt.date
+
+    return [
+        DailyRainfallAnomaly(**record)
         for record in dataframe.to_dict(orient="records")
     ]
 

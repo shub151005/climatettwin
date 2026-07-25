@@ -63,3 +63,20 @@ class RainfallMetadataResponse(BaseModel):
     average_valid_grid_cells_per_day: float
     processing_level: str
     source_file: str
+
+class DailyRainfallAnomaly(BaseModel):
+    date: date
+    month: int
+    day_of_year: int
+    season: str
+    rainfall_mean_mm: float
+    rainfall_max_mm: float
+    rainfall_min_mm: float
+    valid_grid_cell_count: int
+    rainfall_anomaly_from_annual_mean_mm: float
+    rainfall_z_score: float
+    rainfall_percentile: float
+    rainfall_intensity_class: str
+    is_dry_day: bool
+    is_wet_day: bool
+    is_extreme_day: bool
