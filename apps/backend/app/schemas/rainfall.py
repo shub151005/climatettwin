@@ -80,3 +80,20 @@ class DailyRainfallAnomaly(BaseModel):
     is_dry_day: bool
     is_wet_day: bool
     is_extreme_day: bool
+
+class RainfallAnomalySummaryResponse(BaseModel):
+    region: str
+    baseline: str
+    annual_mean_rainfall_mm: float
+    annual_std_rainfall_mm: float
+    dry_days: int
+    wet_days: int
+    extreme_days: int
+    peak_day: date
+    peak_day_rainfall_mean_mm: float
+    peak_day_rainfall_max_mm: float
+    peak_day_anomaly_mm: float
+    peak_day_percentile: float
+    peak_day_intensity_class: str
+    peak_day_season: str
+

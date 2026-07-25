@@ -77,6 +77,40 @@ export interface RainfallMetadataResponse {
   source_file: string;
 }
 
+export interface DailyRainfallAnomaly {
+  date: string;
+  month: number;
+  day_of_year: number;
+  season: string;
+  rainfall_mean_mm: number;
+  rainfall_max_mm: number;
+  rainfall_min_mm: number;
+  valid_grid_cell_count: number;
+  rainfall_anomaly_from_annual_mean_mm: number;
+  rainfall_z_score: number;
+  rainfall_percentile: number;
+  rainfall_intensity_class: string;
+  is_dry_day: boolean;
+  is_wet_day: boolean;
+  is_extreme_day: boolean;
+}
+
+export interface RainfallAnomalySummaryResponse {
+  region: string;
+  baseline: string;
+  annual_mean_rainfall_mm: number;
+  annual_std_rainfall_mm: number;
+  dry_days: number;
+  wet_days: number;
+  extreme_days: number;
+  peak_day: string;
+  peak_day_rainfall_mean_mm: number;
+  peak_day_rainfall_max_mm: number;
+  peak_day_anomaly_mm: number;
+  peak_day_percentile: number;
+  peak_day_intensity_class: string;
+  peak_day_season: string;
+}
 
 async function fetchJson<T>(url: string): Promise<T> {
   const response = await fetch(url);
@@ -145,5 +179,19 @@ export async function getAssamRainfallFieldSequence(
 
   return fetchJson<RainfallFieldSequenceResponse>(
     `${API_BASE_URL}/api/v1/rainfall/assam/field-sequence?${searchParams.toString()}`
+  );
+}
+
+export async function getAssamDailyRainfallAnomalies(): Promise<
+  DailyRainfallAnomaly[]
+> {
+  return fetchJson<DailyRainfallAnomaly[]>(
+    `${API_BASE_URL}/api/v1/rainfall/assam/daily-anomalies`
+  );
+}
+
+export async function getAssamRainfallAnomalySummary(): Promise<RainfallAnomalySummaryResponse> {
+  return fetchJson<RainfallAnomalySummaryResponse>(
+    `${API_BASE_URL}/api/v1/rainfall/assam/anomaly-summary`
   );
 }

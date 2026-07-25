@@ -11,6 +11,7 @@ from app.schemas.rainfall import (
     RainfallFieldResponse,
     RainfallFieldSequenceResponse,
     RainfallMetadataResponse,
+    RainfallAnomalySummaryResponse,
     DailyRainfallAnomaly
 )
 
@@ -42,6 +43,69 @@ DAILY_ANOMALY_FILE = (
     / "assam"
     / "assam_rainfall_daily_anomalies_2025_clipped.csv"
 )
+
+@router.get(
+    "/rainfall/assam/anomaly-summary",
+    response_model=RainfallAnomalySummaryResponse,
+)
+def get_assam_rainfall_anomaly_summary() -> RainfallAnomalySummaryResponse:
+    if not DAILY_ANOMALY_FILE.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Daily anomaly file not found: {DAILY_ANOMALY_FILE}",
+        )
+
+    dataframe = pd.read_csv(DAILY_ANOMALY_FILE)
+    dataframe["date"] = pd.to_datetime(dataframe["date"]).dt.date
+
+    if dataframe.empty:
+        raise HTTPException(
+            status_code=404,
+            detail="Daily anomaly file is empty.",
+        )
+
+    annual_mean = float(dataframe["rainfall_mean_mm"].mean())
+    annual_std = float(dataframe["rainfall_mean_mm"].std())
+
+    dry_days = int(dataframe["is_dry_day"].sum())
+    wet_days = int(dataframe["is_wet_day"].sum())
+    extreme_days = int(dataframe["is_extreme_day"].sum())
+
+    peak_day_record = dataframe.sort_values(
+        "rainfall_mean_mm",
+        ascending=False,
+    ).iloc[0]
+
+    return RainfallAnomalySummaryResponse(
+        region="Assam",
+        baseline="2025_internal_distribution",
+        annual_mean_rainfall_mm=round(annual_mean, 2),
+        annual_std_rainfall_mm=round(annual_std, 2),
+        dry_days=dry_days,
+        wet_days=wet_days,
+        extreme_days=extreme_days,
+        peak_day=peak_day_record["date"],
+        peak_day_rainfall_mean_mm=round(
+            float(peak_day_record["rainfall_mean_mm"]),
+            2,
+        ),
+        peak_day_rainfall_max_mm=round(
+            float(peak_day_record["rainfall_max_mm"]),
+            2,
+        ),
+        peak_day_anomaly_mm=round(
+            float(peak_day_record["rainfall_anomaly_from_annual_mean_mm"]),
+            2,
+        ),
+        peak_day_percentile=round(
+            float(peak_day_record["rainfall_percentile"]),
+            2,
+        ),
+        peak_day_intensity_class=str(
+            peak_day_record["rainfall_intensity_class"]
+        ),
+        peak_day_season=str(peak_day_record["season"]),
+    )
 
 ASSAM_RAINFALL_NETCDF_FILE = (
     PROJECT_ROOT

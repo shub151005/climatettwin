@@ -6,15 +6,19 @@ import { RainfallFieldPreview } from "./components/map/RainfallFieldPreview";
 import { RainfallMap } from "./components/map/RainfallMap";
 
 import {
+  getAssamDailyRainfallAnomalies,
   getAssamDailyRainfallSummary,
   getAssamMonthlyRainfallSummary,
+  getAssamRainfallAnomalySummary,
   getAssamRainfallField,
   getAssamRainfallFieldSequence,
   getAssamRainfallMetadata,
   getHealthStatus,
+  type DailyRainfallAnomaly,
   type DailyRainfallSummary,
   type HealthResponse,
   type MonthlyRainfallSummary,
+  type RainfallAnomalySummaryResponse,
   type RainfallFieldResponse,
   type RainfallMetadataResponse,
 } from "./services/api";
@@ -26,6 +30,11 @@ function App() {
   const [monthlyRainfall, setMonthlyRainfall] = useState<
     MonthlyRainfallSummary[]
   >([]);
+  const [rainfallAnomalies, setRainfallAnomalies] = useState<
+    DailyRainfallAnomaly[]
+  >([]);
+  const [rainfallAnomalySummary, setRainfallAnomalySummary] =
+    useState<RainfallAnomalySummaryResponse | null>(null);
   const [rainfallMetadata, setRainfallMetadata] =
     useState<RainfallMetadataResponse | null>(null);
 
@@ -55,11 +64,15 @@ function App() {
           metadataData,
           dailyRainfallData,
           monthlyRainfallData,
+          anomalyData,
+          anomalySummaryData,
         ] = await Promise.all([
           getHealthStatus(),
           getAssamRainfallMetadata(),
           getAssamDailyRainfallSummary(),
           getAssamMonthlyRainfallSummary(),
+          getAssamDailyRainfallAnomalies(),
+          getAssamRainfallAnomalySummary(),
         ]);
 
         const defaultFieldDate = metadataData.end_date;
@@ -81,6 +94,8 @@ function App() {
         setRainfallMetadata(metadataData);
         setRainfall(dailyRainfallData);
         setMonthlyRainfall(monthlyRainfallData);
+        setRainfallAnomalies(anomalyData);
+        setRainfallAnomalySummary(anomalySummaryData);
         setRainfallField(fieldData);
         setFieldSequence(sequenceData.fields);
 
@@ -127,6 +142,30 @@ function App() {
       maxRainfallDay,
     };
   }, [rainfall]);
+
+  const selectedRainfallAnomaly = useMemo(() => {
+    if (!rainfallField) {
+      return null;
+    }
+
+    return (
+      rainfallAnomalies.find(
+        (anomaly) => anomaly.date === rainfallField.date
+      ) ?? null
+    );
+  }, [rainfallAnomalies, rainfallField]);
+
+  const peakRainfallAnomaly = useMemo(() => {
+    if (!rainfallStats.maxRainfallDay) {
+      return null;
+    }
+
+    return (
+      rainfallAnomalies.find(
+        (anomaly) => anomaly.date === rainfallStats.maxRainfallDay?.date
+      ) ?? null
+    );
+  }, [rainfallAnomalies, rainfallStats.maxRainfallDay]);
 
   function getCurrentSequenceIndex(): number {
     if (!rainfallField || fieldSequence.length === 0) {
@@ -375,8 +414,8 @@ function App() {
             }}
           >
             Boundary-clipped rainfall analysis for Assam using real IMD gridded
-            rainfall data, geospatial processing, backend APIs, and interactive
-            MapLibre visualization.
+            rainfall data, geospatial processing, backend APIs, anomaly
+            detection, and interactive MapLibre visualization.
           </p>
         </header>
 
@@ -395,14 +434,24 @@ function App() {
           />
 
           <MetricCard
-            label="Total Regional Rainfall"
-            value={`${rainfallStats.totalRainfall.toFixed(1)} mm`}
-            helper="Sum of daily regional mean rainfall"
+            label="Annual Mean"
+            value={
+              rainfallAnomalySummary
+                ? `${rainfallAnomalySummary.annual_mean_rainfall_mm.toFixed(
+                    2
+                  )} mm/day`
+                : "Loading..."
+            }
+            helper="2025 internal rainfall baseline"
           />
 
           <MetricCard
             label="Wet Days"
-            value={rainfallStats.wetDays.toString()}
+            value={
+              rainfallAnomalySummary
+                ? rainfallAnomalySummary.wet_days.toString()
+                : rainfallStats.wetDays.toString()
+            }
             helper="Days with regional mean rainfall above 1 mm"
           />
 
@@ -421,6 +470,49 @@ function App() {
           />
         </section>
 
+        {rainfallAnomalySummary && (
+          <section
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+              gap: "16px",
+              marginBottom: "20px",
+            }}
+          >
+            <MetricCard
+              label="Dry / Trace Days"
+              value={rainfallAnomalySummary.dry_days.toString()}
+              helper="Days at or below 0.1 mm regional mean"
+            />
+
+            <MetricCard
+              label="Extreme Days"
+              value={rainfallAnomalySummary.extreme_days.toString()}
+              helper="Days in the top 5% of 2025 rainfall distribution"
+            />
+
+            <MetricCard
+              label="Peak Anomaly"
+              value={`+${rainfallAnomalySummary.peak_day_anomaly_mm.toFixed(
+                2
+              )} mm`}
+              helper={`Above 2025 mean on ${rainfallAnomalySummary.peak_day}`}
+            />
+
+            <MetricCard
+              label="Peak Class"
+              value={formatRainfallClass(
+                rainfallAnomalySummary.peak_day_intensity_class
+              )}
+              helper={`${formatSeason(
+                rainfallAnomalySummary.peak_day_season
+              )} · ${rainfallAnomalySummary.peak_day_percentile.toFixed(
+                2
+              )}th percentile`}
+            />
+          </section>
+        )}
+
         {rainfallStats.maxRainfallDay && (
           <section
             style={{
@@ -435,9 +527,10 @@ function App() {
               style={{
                 margin: "0 0 8px",
                 fontSize: "18px",
+                color: "#111827",
               }}
             >
-              Highest Regional Mean Rainfall Day
+              Peak Event Intelligence
             </h2>
 
             <p
@@ -445,6 +538,7 @@ function App() {
                 margin: 0,
                 color: "#374151",
                 fontSize: "15px",
+                lineHeight: 1.7,
               }}
             >
               {rainfallStats.maxRainfallDay.date} recorded{" "}
@@ -456,6 +550,32 @@ function App() {
                 {rainfallStats.maxRainfallDay.rainfall_max_mm.toFixed(2)} mm
               </strong>
               .
+              {peakRainfallAnomaly && (
+                <>
+                  {" "}
+                  It was{" "}
+                  <strong>
+                    {peakRainfallAnomaly.rainfall_anomaly_from_annual_mean_mm.toFixed(
+                      2
+                    )}{" "}
+                    mm above the 2025 Assam daily mean
+                  </strong>
+                  , ranked at the{" "}
+                  <strong>
+                    {peakRainfallAnomaly.rainfall_percentile.toFixed(2)}th
+                    percentile
+                  </strong>
+                  , classified as{" "}
+                  <strong>
+                    {formatRainfallClass(
+                      peakRainfallAnomaly.rainfall_intensity_class
+                    )}
+                  </strong>{" "}
+                  during the{" "}
+                  <strong>{formatSeason(peakRainfallAnomaly.season)}</strong>{" "}
+                  season.
+                </>
+              )}
               {peakRainfallSequenceWindow && (
                 <>
                   {" "}
@@ -531,7 +651,7 @@ function App() {
                 </p>
               )}
 
-              {rainfallStats.maxRainfallDay && (
+              {selectedRainfallAnomaly && (
                 <p
                   style={{
                     margin: "6px 0 0",
@@ -540,11 +660,17 @@ function App() {
                     fontWeight: 500,
                   }}
                 >
-                  Peak rainfall day: {rainfallStats.maxRainfallDay.date} ·{" "}
-                  {rainfallStats.maxRainfallDay.rainfall_mean_mm.toFixed(2)} mm
-                  regional mean ·{" "}
-                  {rainfallStats.maxRainfallDay.rainfall_max_mm.toFixed(2)} mm
-                  max grid-cell rainfall
+                  Selected day intelligence:{" "}
+                  {formatRainfallClass(
+                    selectedRainfallAnomaly.rainfall_intensity_class
+                  )}{" "}
+                  · anomaly{" "}
+                  {selectedRainfallAnomaly.rainfall_anomaly_from_annual_mean_mm.toFixed(
+                    2
+                  )}{" "}
+                  mm · percentile{" "}
+                  {selectedRainfallAnomaly.rainfall_percentile.toFixed(2)} ·{" "}
+                  {formatSeason(selectedRainfallAnomaly.season)}
                 </p>
               )}
             </div>
@@ -776,6 +902,22 @@ function MetricCard({ label, value, helper }: MetricCardProps) {
       </p>
     </article>
   );
+}
+
+
+function formatRainfallClass(value: string): string {
+  return value
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+
+function formatSeason(value: string): string {
+  return value
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }
 
 
