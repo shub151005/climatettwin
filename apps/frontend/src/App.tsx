@@ -13,6 +13,7 @@ import {
   getAssamRainfallField,
   getAssamRainfallFieldSequence,
   getAssamRainfallMetadata,
+  getAssamSeasonalRainfallSummary,
   getHealthStatus,
   type DailyRainfallAnomaly,
   type DailyRainfallSummary,
@@ -21,6 +22,7 @@ import {
   type RainfallAnomalySummaryResponse,
   type RainfallFieldResponse,
   type RainfallMetadataResponse,
+  type SeasonalRainfallSummary,
 } from "./services/api";
 
 
@@ -35,6 +37,9 @@ function App() {
   >([]);
   const [rainfallAnomalySummary, setRainfallAnomalySummary] =
     useState<RainfallAnomalySummaryResponse | null>(null);
+  const [seasonalRainfallSummary, setSeasonalRainfallSummary] = useState<
+    SeasonalRainfallSummary[]
+  >([]);
   const [rainfallMetadata, setRainfallMetadata] =
     useState<RainfallMetadataResponse | null>(null);
 
@@ -66,6 +71,7 @@ function App() {
           monthlyRainfallData,
           anomalyData,
           anomalySummaryData,
+          seasonalSummaryData,
         ] = await Promise.all([
           getHealthStatus(),
           getAssamRainfallMetadata(),
@@ -73,6 +79,7 @@ function App() {
           getAssamMonthlyRainfallSummary(),
           getAssamDailyRainfallAnomalies(),
           getAssamRainfallAnomalySummary(),
+          getAssamSeasonalRainfallSummary(),
         ]);
 
         const defaultFieldDate = metadataData.end_date;
@@ -96,6 +103,7 @@ function App() {
         setMonthlyRainfall(monthlyRainfallData);
         setRainfallAnomalies(anomalyData);
         setRainfallAnomalySummary(anomalySummaryData);
+        setSeasonalRainfallSummary(seasonalSummaryData);
         setRainfallField(fieldData);
         setFieldSequence(sequenceData.fields);
 
@@ -166,6 +174,18 @@ function App() {
       ) ?? null
     );
   }, [rainfallAnomalies, rainfallStats.maxRainfallDay]);
+
+  const dominantSeason = useMemo(() => {
+    if (seasonalRainfallSummary.length === 0) {
+      return null;
+    }
+
+    return seasonalRainfallSummary.reduce((maxSeason, currentSeason) => {
+      return currentSeason.total_rainfall_mm > maxSeason.total_rainfall_mm
+        ? currentSeason
+        : maxSeason;
+    }, seasonalRainfallSummary[0]);
+  }, [seasonalRainfallSummary]);
 
   function getCurrentSequenceIndex(): number {
     if (!rainfallField || fieldSequence.length === 0) {
@@ -415,7 +435,8 @@ function App() {
           >
             Boundary-clipped rainfall analysis for Assam using real IMD gridded
             rainfall data, geospatial processing, backend APIs, anomaly
-            detection, and interactive MapLibre visualization.
+            detection, seasonal intelligence, and interactive MapLibre
+            visualization.
           </p>
         </header>
 
@@ -500,16 +521,125 @@ function App() {
             />
 
             <MetricCard
-              label="Peak Class"
-              value={formatRainfallClass(
-                rainfallAnomalySummary.peak_day_intensity_class
-              )}
-              helper={`${formatSeason(
-                rainfallAnomalySummary.peak_day_season
-              )} · ${rainfallAnomalySummary.peak_day_percentile.toFixed(
-                2
-              )}th percentile`}
+              label="Dominant Season"
+              value={
+                dominantSeason ? formatSeason(dominantSeason.season) : "Loading..."
+              }
+              helper={
+                dominantSeason
+                  ? `${dominantSeason.season_share_of_annual_rainfall_percent.toFixed(
+                      2
+                    )}% annual rainfall share`
+                  : "Reading seasonal summary"
+              }
             />
+          </section>
+        )}
+
+        {seasonalRainfallSummary.length > 0 && (
+          <section
+            style={{
+              background: "#ffffff",
+              border: "1px solid #e5e7eb",
+              borderRadius: "16px",
+              padding: "20px",
+              marginBottom: "20px",
+            }}
+          >
+            <h2
+              style={{
+                margin: "0 0 8px",
+                fontSize: "20px",
+                color: "#111827",
+                fontWeight: 800,
+              }}
+            >
+              Seasonal Rainfall Intelligence
+            </h2>
+
+            <p
+              style={{
+                margin: "0 0 16px",
+                color: "#4b5563",
+                fontSize: "15px",
+                lineHeight: 1.6,
+              }}
+            >
+              Seasonal aggregation from the boundary-clipped 2025 Assam rainfall
+              anomaly dataset.
+            </p>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                gap: "14px",
+              }}
+            >
+              {seasonalRainfallSummary.map((season) => (
+                <article
+                  key={season.season}
+                  style={{
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "14px",
+                    padding: "16px",
+                    background:
+                      season.season === dominantSeason?.season
+                        ? "#ecfdf5"
+                        : "#ffffff",
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: "0 0 8px",
+                      color: "#374151",
+                      fontSize: "13px",
+                      fontWeight: 800,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                    }}
+                  >
+                    {formatSeason(season.season)}
+                  </p>
+
+                  <p
+                    style={{
+                      margin: 0,
+                      color: "#111827",
+                      fontSize: "24px",
+                      fontWeight: 900,
+                    }}
+                  >
+                    {season.total_rainfall_mm.toFixed(1)} mm
+                  </p>
+
+                  <p
+                    style={{
+                      margin: "6px 0 0",
+                      color: "#4b5563",
+                      fontSize: "14px",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {season.season_share_of_annual_rainfall_percent.toFixed(2)}%
+                    annual share · {season.day_count} days
+                  </p>
+
+                  <p
+                    style={{
+                      margin: "10px 0 0",
+                      color: "#4b5563",
+                      fontSize: "13px",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Mean {season.mean_rainfall_mm.toFixed(2)} mm/day · Wet{" "}
+                    {season.wet_days} · Dry {season.dry_days} · Extreme{" "}
+                    {season.extreme_days}
+                  </p>
+                </article>
+              ))}
+            </div>
           </section>
         )}
 

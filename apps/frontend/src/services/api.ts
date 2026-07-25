@@ -112,6 +112,18 @@ export interface RainfallAnomalySummaryResponse {
   peak_day_season: string;
 }
 
+export interface SeasonalRainfallSummary {
+  season: string;
+  day_count: number;
+  total_rainfall_mm: number;
+  mean_rainfall_mm: number;
+  max_daily_rainfall_mm: number;
+  wet_days: number;
+  dry_days: number;
+  extreme_days: number;
+  season_share_of_annual_rainfall_percent: number;
+}
+
 async function fetchJson<T>(url: string): Promise<T> {
   const response = await fetch(url);
 
@@ -193,5 +205,13 @@ export async function getAssamDailyRainfallAnomalies(): Promise<
 export async function getAssamRainfallAnomalySummary(): Promise<RainfallAnomalySummaryResponse> {
   return fetchJson<RainfallAnomalySummaryResponse>(
     `${API_BASE_URL}/api/v1/rainfall/assam/anomaly-summary`
+  );
+}
+
+export async function getAssamSeasonalRainfallSummary(): Promise<
+  SeasonalRainfallSummary[]
+> {
+  return fetchJson<SeasonalRainfallSummary[]>(
+    `${API_BASE_URL}/api/v1/rainfall/assam/seasonal-summary`
   );
 }

@@ -11,6 +11,7 @@ from app.schemas.rainfall import (
     RainfallFieldResponse,
     RainfallFieldSequenceResponse,
     RainfallMetadataResponse,
+    SeasonalRainfallSummary,
     RainfallAnomalySummaryResponse,
     DailyRainfallAnomaly
 )
@@ -43,6 +44,17 @@ DAILY_ANOMALY_FILE = (
     / "assam"
     / "assam_rainfall_daily_anomalies_2025_clipped.csv"
 )
+
+ASSAM_RAINFALL_NETCDF_FILE = (
+    PROJECT_ROOT
+    / "data"
+    / "processed"
+    / "imd"
+    / "rainfall"
+    / "assam_rainfall_2025_clipped.nc"
+)
+
+
 
 @router.get(
     "/rainfall/assam/anomaly-summary",
@@ -107,14 +119,79 @@ def get_assam_rainfall_anomaly_summary() -> RainfallAnomalySummaryResponse:
         peak_day_season=str(peak_day_record["season"]),
     )
 
-ASSAM_RAINFALL_NETCDF_FILE = (
-    PROJECT_ROOT
-    / "data"
-    / "processed"
-    / "imd"
-    / "rainfall"
-    / "assam_rainfall_2025_clipped.nc"
+@router.get(
+    "/rainfall/assam/seasonal-summary",
+    response_model=list[SeasonalRainfallSummary],
 )
+def get_assam_seasonal_rainfall_summary() -> list[SeasonalRainfallSummary]:
+    if not DAILY_ANOMALY_FILE.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Daily anomaly file not found: {DAILY_ANOMALY_FILE}",
+        )
+
+    dataframe = pd.read_csv(DAILY_ANOMALY_FILE)
+
+    if dataframe.empty:
+        raise HTTPException(
+            status_code=404,
+            detail="Daily anomaly file is empty.",
+        )
+
+    annual_total = float(dataframe["rainfall_mean_mm"].sum())
+
+    season_order = {
+        "winter": 1,
+        "pre_monsoon": 2,
+        "monsoon": 3,
+        "post_monsoon": 4,
+    }
+
+    grouped = dataframe.groupby("season", as_index=False).agg(
+        day_count=("date", "count"),
+        total_rainfall_mm=("rainfall_mean_mm", "sum"),
+        mean_rainfall_mm=("rainfall_mean_mm", "mean"),
+        max_daily_rainfall_mm=("rainfall_mean_mm", "max"),
+        wet_days=("is_wet_day", "sum"),
+        dry_days=("is_dry_day", "sum"),
+        extreme_days=("is_extreme_day", "sum"),
+    )
+
+    grouped["season_share_of_annual_rainfall_percent"] = grouped[
+        "total_rainfall_mm"
+    ].apply(
+        lambda value: (float(value) / annual_total * 100)
+        if annual_total > 0
+        else 0.0
+    )
+
+    grouped["season_order"] = grouped["season"].map(season_order)
+    grouped = grouped.sort_values("season_order")
+
+    summaries: list[SeasonalRainfallSummary] = []
+
+    for record in grouped.to_dict(orient="records"):
+        summaries.append(
+            SeasonalRainfallSummary(
+                season=str(record["season"]),
+                day_count=int(record["day_count"]),
+                total_rainfall_mm=round(float(record["total_rainfall_mm"]), 2),
+                mean_rainfall_mm=round(float(record["mean_rainfall_mm"]), 2),
+                max_daily_rainfall_mm=round(
+                    float(record["max_daily_rainfall_mm"]),
+                    2,
+                ),
+                wet_days=int(record["wet_days"]),
+                dry_days=int(record["dry_days"]),
+                extreme_days=int(record["extreme_days"]),
+                season_share_of_annual_rainfall_percent=round(
+                    float(record["season_share_of_annual_rainfall_percent"]),
+                    2,
+                ),
+            )
+        )
+
+    return summaries
 
 
 @router.get(

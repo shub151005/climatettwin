@@ -97,3 +97,13 @@ class RainfallAnomalySummaryResponse(BaseModel):
     peak_day_intensity_class: str
     peak_day_season: str
 
+class SeasonalRainfallSummary(BaseModel):
+    season: str
+    day_count: int
+    total_rainfall_mm: float
+    mean_rainfall_mm: float
+    max_daily_rainfall_mm: float
+    wet_days: int
+    dry_days: int
+    extreme_days: int
+    season_share_of_annual_rainfall_percent: float
