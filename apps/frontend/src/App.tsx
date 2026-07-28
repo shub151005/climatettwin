@@ -4,6 +4,7 @@ import { MonthlyRainfallBarChart } from "./components/charts/MonthlyRainfallBarC
 import { RainfallLineChart } from "./components/charts/RainfallLineChart";
 import { RainfallFieldPreview } from "./components/map/RainfallFieldPreview";
 import { RainfallMap } from "./components/map/RainfallMap";
+import { MonthlyTemperatureChart } from "./components/charts/MonthlyTemperatureChart";
 
 import {
   getAssamDailyRainfallAnomalies,
@@ -825,6 +826,8 @@ function App() {
         <RainfallLineChart data={rainfall} anomalies={rainfallAnomalies} />
 
         <MonthlyRainfallBarChart data={monthlyRainfall} />
+
+        <MonthlyTemperatureChart data={monthlyTemperature} />
 
         <section
           style={{
