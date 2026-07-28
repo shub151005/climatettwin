@@ -124,6 +124,92 @@ export interface SeasonalRainfallSummary {
   season_share_of_annual_rainfall_percent: number;
 }
 
+export interface DailyTemperatureSummary {
+  date: string;
+  month: number;
+  day_of_year: number;
+
+  tmin_mean_c: number;
+  tmin_min_c: number;
+  tmin_max_c: number;
+
+  tmax_mean_c: number;
+  tmax_min_c: number;
+  tmax_max_c: number;
+
+  tmean_mean_c: number;
+  tmean_min_c: number;
+  tmean_max_c: number;
+
+  dtr_mean_c: number;
+  dtr_min_c: number;
+  dtr_max_c: number;
+
+  valid_grid_cell_count: number;
+}
+
+export interface MonthlyTemperatureSummary {
+  month: number;
+
+  tmin_mean_c: number;
+  tmin_min_c: number;
+  tmin_max_c: number;
+
+  tmax_mean_c: number;
+  tmax_min_c: number;
+  tmax_max_c: number;
+
+  tmean_mean_c: number;
+  tmean_min_c: number;
+  tmean_max_c: number;
+
+  dtr_mean_c: number;
+  dtr_min_c: number;
+  dtr_max_c: number;
+
+  valid_grid_cell_count_mean: number;
+
+  hot_days: number;
+  warm_nights: number;
+  cool_days: number;
+}
+
+export interface TemperatureMetadataResponse {
+  region: string;
+  variables: string[];
+  unit: string;
+  start_date: string;
+  end_date: string;
+  day_count: number;
+  latitude_count: number;
+  longitude_count: number;
+  total_grid_cells: number;
+  average_valid_grid_cells_per_day: number;
+  processing_level: string;
+  source_file: string;
+}
+
+export interface TemperatureSummaryResponse {
+  region: string;
+  annual_tmin_mean_c: number;
+  annual_tmax_mean_c: number;
+  annual_tmean_mean_c: number;
+  annual_dtr_mean_c: number;
+
+  hot_days: number;
+  warm_nights: number;
+  cool_days: number;
+
+  peak_tmax_day: string;
+  peak_tmax_mean_c: number;
+
+  coldest_tmin_day: string;
+  coldest_tmin_mean_c: number;
+
+  warmest_night_day: string;
+  warmest_night_tmin_c: number;
+}
+
 async function fetchJson<T>(url: string): Promise<T> {
   const response = await fetch(url);
 
@@ -213,5 +299,37 @@ export async function getAssamSeasonalRainfallSummary(): Promise<
 > {
   return fetchJson<SeasonalRainfallSummary[]>(
     `${API_BASE_URL}/api/v1/rainfall/assam/seasonal-summary`
+  );
+}
+
+export async function getAssamTemperatureMetadata(): Promise<
+  TemperatureMetadataResponse
+> {
+  return fetchJson<TemperatureMetadataResponse>(
+    `${API_BASE_URL}/api/v1/temperature/assam/metadata`
+  );
+}
+
+export async function getAssamDailyTemperatureSummary(): Promise<
+  DailyTemperatureSummary[]
+> {
+  return fetchJson<DailyTemperatureSummary[]>(
+    `${API_BASE_URL}/api/v1/temperature/assam/daily-summary`
+  );
+}
+
+export async function getAssamMonthlyTemperatureSummary(): Promise<
+  MonthlyTemperatureSummary[]
+> {
+  return fetchJson<MonthlyTemperatureSummary[]>(
+    `${API_BASE_URL}/api/v1/temperature/assam/monthly-summary`
+  );
+}
+
+export async function getAssamTemperatureSummary(): Promise<
+  TemperatureSummaryResponse
+> {
+  return fetchJson<TemperatureSummaryResponse>(
+    `${API_BASE_URL}/api/v1/temperature/assam/summary`
   );
 }

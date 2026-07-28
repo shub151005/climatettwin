@@ -14,6 +14,9 @@ import {
   getAssamRainfallFieldSequence,
   getAssamRainfallMetadata,
   getAssamSeasonalRainfallSummary,
+  getAssamTemperatureMetadata,
+  getAssamTemperatureSummary,
+  getAssamMonthlyTemperatureSummary,
   getHealthStatus,
   type DailyRainfallAnomaly,
   type DailyRainfallSummary,
@@ -23,11 +26,15 @@ import {
   type RainfallFieldResponse,
   type RainfallMetadataResponse,
   type SeasonalRainfallSummary,
+  type TemperatureMetadataResponse,
+  type TemperatureSummaryResponse,
+  type MonthlyTemperatureSummary,
 } from "./services/api";
 
 
 function App() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
+
   const [rainfall, setRainfall] = useState<DailyRainfallSummary[]>([]);
   const [monthlyRainfall, setMonthlyRainfall] = useState<
     MonthlyRainfallSummary[]
@@ -42,6 +49,14 @@ function App() {
   >([]);
   const [rainfallMetadata, setRainfallMetadata] =
     useState<RainfallMetadataResponse | null>(null);
+
+  const [temperatureMetadata, setTemperatureMetadata] =
+    useState<TemperatureMetadataResponse | null>(null);
+  const [temperatureSummary, setTemperatureSummary] =
+    useState<TemperatureSummaryResponse | null>(null);
+  const [monthlyTemperature, setMonthlyTemperature] = useState<
+    MonthlyTemperatureSummary[]
+  >([]);
 
   const [rainfallField, setRainfallField] =
     useState<RainfallFieldResponse | null>(null);
@@ -72,6 +87,9 @@ function App() {
           anomalyData,
           anomalySummaryData,
           seasonalSummaryData,
+          temperatureMetadataData,
+          temperatureSummaryData,
+          monthlyTemperatureData,
         ] = await Promise.all([
           getHealthStatus(),
           getAssamRainfallMetadata(),
@@ -80,6 +98,9 @@ function App() {
           getAssamDailyRainfallAnomalies(),
           getAssamRainfallAnomalySummary(),
           getAssamSeasonalRainfallSummary(),
+          getAssamTemperatureMetadata(),
+          getAssamTemperatureSummary(),
+          getAssamMonthlyTemperatureSummary(),
         ]);
 
         const defaultFieldDate = metadataData.end_date;
@@ -98,12 +119,18 @@ function App() {
         ]);
 
         setHealth(healthData);
+
         setRainfallMetadata(metadataData);
         setRainfall(dailyRainfallData);
         setMonthlyRainfall(monthlyRainfallData);
         setRainfallAnomalies(anomalyData);
         setRainfallAnomalySummary(anomalySummaryData);
         setSeasonalRainfallSummary(seasonalSummaryData);
+
+        setTemperatureMetadata(temperatureMetadataData);
+        setTemperatureSummary(temperatureSummaryData);
+        setMonthlyTemperature(monthlyTemperatureData);
+
         setRainfallField(fieldData);
         setFieldSequence(sequenceData.fields);
 
@@ -421,21 +448,21 @@ function App() {
               fontWeight: 900,
             }}
           >
-            Real Rainfall Intelligence
+            Real Rainfall & Temperature Intelligence
           </h1>
 
           <p
             style={{
-              maxWidth: "820px",
+              maxWidth: "840px",
               margin: "14px 0 0",
               color: "#4b5563",
               fontSize: "17px",
               lineHeight: 1.7,
             }}
           >
-            Boundary-clipped rainfall analysis for Assam using real IMD gridded
-            rainfall data, geospatial processing, backend APIs, anomaly
-            detection, seasonal intelligence, and interactive MapLibre
+            Boundary-clipped climate analysis for Assam using real IMD gridded
+            rainfall and temperature data, geospatial processing, backend APIs,
+            anomaly detection, seasonal intelligence, and interactive MapLibre
             visualization.
           </p>
         </header>
@@ -455,7 +482,7 @@ function App() {
           />
 
           <MetricCard
-            label="Annual Mean"
+            label="Annual Rainfall Mean"
             value={
               rainfallAnomalySummary
                 ? `${rainfallAnomalySummary.annual_mean_rainfall_mm.toFixed(
@@ -467,13 +494,13 @@ function App() {
           />
 
           <MetricCard
-            label="Wet Days"
+            label="Annual TMEAN"
             value={
-              rainfallAnomalySummary
-                ? rainfallAnomalySummary.wet_days.toString()
-                : rainfallStats.wetDays.toString()
+              temperatureSummary
+                ? `${temperatureSummary.annual_tmean_mean_c.toFixed(2)} °C`
+                : "Loading..."
             }
-            helper="Days with regional mean rainfall above 1 mm"
+            helper="Mean daily temperature"
           />
 
           <MetricCard
@@ -501,19 +528,19 @@ function App() {
             }}
           >
             <MetricCard
-              label="Dry / Trace Days"
-              value={rainfallAnomalySummary.dry_days.toString()}
-              helper="Days at or below 0.1 mm regional mean"
+              label="Wet Days"
+              value={rainfallAnomalySummary.wet_days.toString()}
+              helper="Days with regional mean rainfall above 1 mm"
             />
 
             <MetricCard
-              label="Extreme Days"
+              label="Extreme Rainfall Days"
               value={rainfallAnomalySummary.extreme_days.toString()}
               helper="Days in the top 5% of 2025 rainfall distribution"
             />
 
             <MetricCard
-              label="Peak Anomaly"
+              label="Peak Rainfall Anomaly"
               value={`+${rainfallAnomalySummary.peak_day_anomaly_mm.toFixed(
                 2
               )} mm`}
@@ -521,7 +548,7 @@ function App() {
             />
 
             <MetricCard
-              label="Dominant Season"
+              label="Dominant Rainfall Season"
               value={
                 dominantSeason ? formatSeason(dominantSeason.season) : "Loading..."
               }
@@ -546,25 +573,9 @@ function App() {
               marginBottom: "20px",
             }}
           >
-            <h2
-              style={{
-                margin: "0 0 8px",
-                fontSize: "20px",
-                color: "#111827",
-                fontWeight: 800,
-              }}
-            >
-              Seasonal Rainfall Intelligence
-            </h2>
+            <h2 style={sectionTitleStyle}>Seasonal Rainfall Intelligence</h2>
 
-            <p
-              style={{
-                margin: "0 0 16px",
-                color: "#4b5563",
-                fontSize: "15px",
-                lineHeight: 1.6,
-              }}
-            >
+            <p style={sectionSubtitleStyle}>
               Seasonal aggregation from the boundary-clipped 2025 Assam rainfall
               anomaly dataset.
             </p>
@@ -643,6 +654,96 @@ function App() {
           </section>
         )}
 
+        {temperatureSummary && (
+          <section
+            style={{
+              background: "#ffffff",
+              border: "1px solid #e5e7eb",
+              borderRadius: "16px",
+              padding: "20px",
+              marginBottom: "20px",
+            }}
+          >
+            <h2 style={sectionTitleStyle}>Temperature Intelligence</h2>
+
+            <p style={sectionSubtitleStyle}>
+              Boundary-clipped Assam temperature intelligence from IMD daily
+              minimum and maximum temperature grids.
+              {temperatureMetadata && (
+                <>
+                  {" "}
+                  Coverage: {temperatureMetadata.start_date} →{" "}
+                  {temperatureMetadata.end_date} ·{" "}
+                  {temperatureMetadata.average_valid_grid_cells_per_day} valid
+                  cells/day · {monthlyTemperature.length} monthly summaries.
+                </>
+              )}
+            </p>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                gap: "14px",
+              }}
+            >
+              <MetricCard
+                label="Annual TMEAN"
+                value={`${temperatureSummary.annual_tmean_mean_c.toFixed(
+                  2
+                )} °C`}
+                helper="Mean daily temperature"
+              />
+
+              <MetricCard
+                label="Annual TMAX"
+                value={`${temperatureSummary.annual_tmax_mean_c.toFixed(2)} °C`}
+                helper="Mean daily maximum temperature"
+              />
+
+              <MetricCard
+                label="Annual TMIN"
+                value={`${temperatureSummary.annual_tmin_mean_c.toFixed(2)} °C`}
+                helper="Mean daily minimum temperature"
+              />
+
+              <MetricCard
+                label="Annual DTR"
+                value={`${temperatureSummary.annual_dtr_mean_c.toFixed(2)} °C`}
+                helper="Mean diurnal temperature range"
+              />
+
+              <MetricCard
+                label="Hot Days"
+                value={temperatureSummary.hot_days.toString()}
+                helper="Days with regional mean TMAX ≥ 35 °C"
+              />
+
+              <MetricCard
+                label="Warm Nights"
+                value={temperatureSummary.warm_nights.toString()}
+                helper="Days with regional mean TMIN ≥ 25 °C"
+              />
+
+              <MetricCard
+                label="Peak Heat Day"
+                value={temperatureSummary.peak_tmax_day}
+                helper={`${temperatureSummary.peak_tmax_mean_c.toFixed(
+                  2
+                )} °C regional mean TMAX`}
+              />
+
+              <MetricCard
+                label="Coldest Night"
+                value={temperatureSummary.coldest_tmin_day}
+                helper={`${temperatureSummary.coldest_tmin_mean_c.toFixed(
+                  2
+                )} °C regional mean TMIN`}
+              />
+            </div>
+          </section>
+        )}
+
         {rainfallStats.maxRainfallDay && (
           <section
             style={{
@@ -660,7 +761,7 @@ function App() {
                 color: "#111827",
               }}
             >
-              Peak Event Intelligence
+              Peak Rainfall Event Intelligence
             </h2>
 
             <p
@@ -1049,6 +1150,22 @@ function formatSeason(value: string): string {
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 }
+
+
+const sectionTitleStyle = {
+  margin: "0 0 8px",
+  fontSize: "20px",
+  color: "#111827",
+  fontWeight: 800,
+} as const;
+
+
+const sectionSubtitleStyle = {
+  margin: "0 0 16px",
+  color: "#4b5563",
+  fontSize: "15px",
+  lineHeight: 1.6,
+} as const;
 
 
 const labelStyle = {
