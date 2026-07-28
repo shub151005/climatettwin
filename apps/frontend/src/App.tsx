@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { MonthlyRainfallBarChart } from "./components/charts/MonthlyRainfallBarChart";
+import { MonthlyTemperatureChart } from "./components/charts/MonthlyTemperatureChart";
 import { RainfallLineChart } from "./components/charts/RainfallLineChart";
 import { RainfallFieldPreview } from "./components/map/RainfallFieldPreview";
 import { RainfallMap } from "./components/map/RainfallMap";
-import { MonthlyTemperatureChart } from "./components/charts/MonthlyTemperatureChart";
 
 import {
   getAssamDailyRainfallAnomalies,
   getAssamDailyRainfallSummary,
   getAssamMonthlyRainfallSummary,
+  getAssamMonthlyTemperatureSummary,
   getAssamRainfallAnomalySummary,
   getAssamRainfallField,
   getAssamRainfallFieldSequence,
@@ -17,19 +18,18 @@ import {
   getAssamSeasonalRainfallSummary,
   getAssamTemperatureMetadata,
   getAssamTemperatureSummary,
-  getAssamMonthlyTemperatureSummary,
   getHealthStatus,
   type DailyRainfallAnomaly,
   type DailyRainfallSummary,
   type HealthResponse,
   type MonthlyRainfallSummary,
+  type MonthlyTemperatureSummary,
   type RainfallAnomalySummaryResponse,
   type RainfallFieldResponse,
   type RainfallMetadataResponse,
   type SeasonalRainfallSummary,
   type TemperatureMetadataResponse,
   type TemperatureSummaryResponse,
-  type MonthlyTemperatureSummary,
 } from "./services/api";
 
 
@@ -214,6 +214,71 @@ function App() {
         : maxSeason;
     }, seasonalRainfallSummary[0]);
   }, [seasonalRainfallSummary]);
+
+  const climateInterpretation = useMemo(() => {
+    if (
+      !rainfallAnomalySummary ||
+      !dominantSeason ||
+      !temperatureSummary ||
+      monthlyTemperature.length === 0
+    ) {
+      return null;
+    }
+
+    const peakHeatMonth = monthlyTemperature.reduce((maxMonth, currentMonth) => {
+      return currentMonth.tmax_mean_c > maxMonth.tmax_mean_c
+        ? currentMonth
+        : maxMonth;
+    }, monthlyTemperature[0]);
+
+    const warmNightMonth = monthlyTemperature.reduce(
+      (maxMonth, currentMonth) => {
+        return currentMonth.warm_nights > maxMonth.warm_nights
+          ? currentMonth
+          : maxMonth;
+      },
+      monthlyTemperature[0]
+    );
+
+    const lowestDtrMonth = monthlyTemperature.reduce(
+      (minMonth, currentMonth) => {
+        return currentMonth.dtr_mean_c < minMonth.dtr_mean_c
+          ? currentMonth
+          : minMonth;
+      },
+      monthlyTemperature[0]
+    );
+
+    return {
+      dominantRainfallSeason: formatSeason(dominantSeason.season),
+      dominantRainfallShare:
+        dominantSeason.season_share_of_annual_rainfall_percent,
+
+      peakRainfallDate: rainfallAnomalySummary.peak_day,
+      peakRainfallAmount: rainfallAnomalySummary.peak_day_rainfall_mean_mm,
+      peakRainfallSeason: formatSeason(rainfallAnomalySummary.peak_day_season),
+
+      peakHeatDate: temperatureSummary.peak_tmax_day,
+      peakHeatValue: temperatureSummary.peak_tmax_mean_c,
+
+      warmNightDate: temperatureSummary.warmest_night_day,
+      warmNightValue: temperatureSummary.warmest_night_tmin_c,
+
+      peakHeatMonth: MONTH_LABELS[peakHeatMonth.month],
+      peakHeatMonthTmax: peakHeatMonth.tmax_mean_c,
+
+      warmNightMonth: MONTH_LABELS[warmNightMonth.month],
+      warmNightCount: warmNightMonth.warm_nights,
+
+      lowestDtrMonth: MONTH_LABELS[lowestDtrMonth.month],
+      lowestDtrValue: lowestDtrMonth.dtr_mean_c,
+    };
+  }, [
+    rainfallAnomalySummary,
+    dominantSeason,
+    temperatureSummary,
+    monthlyTemperature,
+  ]);
 
   function getCurrentSequenceIndex(): number {
     if (!rainfallField || fieldSequence.length === 0) {
@@ -463,8 +528,8 @@ function App() {
           >
             Boundary-clipped climate analysis for Assam using real IMD gridded
             rainfall and temperature data, geospatial processing, backend APIs,
-            anomaly detection, seasonal intelligence, and interactive MapLibre
-            visualization.
+            anomaly detection, seasonal intelligence, cross-variable climate
+            interpretation, and interactive MapLibre visualization.
           </p>
         </header>
 
@@ -745,6 +810,96 @@ function App() {
           </section>
         )}
 
+        {climateInterpretation && (
+          <section
+            style={{
+              background: "#111827",
+              border: "1px solid #1f2937",
+              borderRadius: "16px",
+              padding: "22px",
+              marginBottom: "20px",
+              color: "#ffffff",
+            }}
+          >
+            <p
+              style={{
+                margin: "0 0 8px",
+                color: "#93c5fd",
+                fontSize: "13px",
+                fontWeight: 800,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+              }}
+            >
+              Cross-variable climate state
+            </p>
+
+            <h2
+              style={{
+                margin: "0 0 12px",
+                fontSize: "22px",
+                fontWeight: 900,
+              }}
+            >
+              Climate State Interpretation
+            </h2>
+
+            <p
+              style={{
+                margin: "0 0 18px",
+                color: "#d1d5db",
+                fontSize: "15px",
+                lineHeight: 1.7,
+                maxWidth: "980px",
+              }}
+            >
+              Assam’s 2025 climate signal is rainfall-dominated during the
+              monsoon, while the strongest heat and warm-night signals appear in
+              the broad warm-season window. This panel combines rainfall
+              seasonality, rainfall extremes, temperature summaries, and monthly
+              thermal behavior.
+            </p>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                gap: "14px",
+              }}
+            >
+              <InterpretationCard
+                title="Rainfall regime"
+                text={`${climateInterpretation.dominantRainfallSeason} contributed ${climateInterpretation.dominantRainfallShare.toFixed(
+                  2
+                )}% of annual rainfall, making it the dominant rainfall season.`}
+              />
+
+              <InterpretationCard
+                title="Peak rainfall event"
+                text={`The strongest rainfall event occurred on ${climateInterpretation.peakRainfallDate}, with ${climateInterpretation.peakRainfallAmount.toFixed(
+                  2
+                )} mm regional mean rainfall during ${climateInterpretation.peakRainfallSeason}.`}
+              />
+
+              <InterpretationCard
+                title="Heat signal"
+                text={`The peak heat day was ${climateInterpretation.peakHeatDate}, reaching ${climateInterpretation.peakHeatValue.toFixed(
+                  2
+                )} °C regional mean TMAX. The warmest month by mean TMAX was ${climateInterpretation.peakHeatMonth} at ${climateInterpretation.peakHeatMonthTmax.toFixed(
+                  2
+                )} °C.`}
+              />
+
+              <InterpretationCard
+                title="Monsoon thermal behavior"
+                text={`${climateInterpretation.warmNightMonth} had the strongest warm-night signal with ${climateInterpretation.warmNightCount} warm nights. ${climateInterpretation.lowestDtrMonth} had the lowest mean DTR at ${climateInterpretation.lowestDtrValue.toFixed(
+                  2
+                )} °C, suggesting reduced day-night temperature contrast.`}
+              />
+            </div>
+          </section>
+        )}
+
         {rainfallStats.maxRainfallDay && (
           <section
             style={{
@@ -879,9 +1034,10 @@ function App() {
                   }}
                 >
                   Dataset coverage: {rainfallMetadata.start_date} to{" "}
-                  {rainfallMetadata.end_date} · {rainfallMetadata.day_count} days ·{" "}
-                  {rainfallMetadata.average_valid_grid_cells_per_day} average
-                  valid Assam cells/day · {rainfallMetadata.processing_level}
+                  {rainfallMetadata.end_date} · {rainfallMetadata.day_count}{" "}
+                  days · {rainfallMetadata.average_valid_grid_cells_per_day}{" "}
+                  average valid Assam cells/day ·{" "}
+                  {rainfallMetadata.processing_level}
                 </p>
               )}
 
@@ -1139,6 +1295,65 @@ function MetricCard({ label, value, helper }: MetricCardProps) {
 }
 
 
+interface InterpretationCardProps {
+  title: string;
+  text: string;
+}
+
+
+function InterpretationCard({ title, text }: InterpretationCardProps) {
+  return (
+    <article
+      style={{
+        background: "rgba(255, 255, 255, 0.06)",
+        border: "1px solid rgba(255, 255, 255, 0.12)",
+        borderRadius: "14px",
+        padding: "16px",
+      }}
+    >
+      <h3
+        style={{
+          margin: "0 0 8px",
+          color: "#ffffff",
+          fontSize: "15px",
+          fontWeight: 800,
+        }}
+      >
+        {title}
+      </h3>
+
+      <p
+        style={{
+          margin: 0,
+          color: "#d1d5db",
+          fontSize: "14px",
+          lineHeight: 1.7,
+        }}
+      >
+        {text}
+      </p>
+    </article>
+  );
+}
+
+
+const MONTH_LABELS = [
+  "",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+
 function formatRainfallClass(value: string): string {
   return value
     .split("_")
@@ -1160,6 +1375,7 @@ const sectionTitleStyle = {
   fontSize: "20px",
   color: "#111827",
   fontWeight: 800,
+  textAlign: "center",
 } as const;
 
 
@@ -1168,6 +1384,7 @@ const sectionSubtitleStyle = {
   color: "#4b5563",
   fontSize: "15px",
   lineHeight: 1.6,
+  textAlign: "center",
 } as const;
 
 
