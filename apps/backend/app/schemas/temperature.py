@@ -87,3 +87,21 @@ class TemperatureSummaryResponse(BaseModel):
 
     warmest_night_day: date
     warmest_night_tmin_c: float
+
+
+class TemperatureFieldCell(BaseModel):
+    latitude: float
+    longitude: float
+    temperature_c: float
+
+
+class TemperatureFieldResponse(BaseModel):
+    region: str
+    date: date
+    variable: str
+    unit: str
+    cell_count: int
+    temperature_min_c: float
+    temperature_max_c: float
+    temperature_mean_c: float
+    cells: list[TemperatureFieldCell]

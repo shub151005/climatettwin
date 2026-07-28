@@ -4,7 +4,7 @@ import { MonthlyRainfallBarChart } from "./components/charts/MonthlyRainfallBarC
 import { MonthlyTemperatureChart } from "./components/charts/MonthlyTemperatureChart";
 import { RainfallLineChart } from "./components/charts/RainfallLineChart";
 import { RainfallFieldPreview } from "./components/map/RainfallFieldPreview";
-import { RainfallMap } from "./components/map/RainfallMap";
+import { ClimateMap } from "./components/map/ClimateMap";
 
 import {
   getAssamDailyRainfallAnomalies,
@@ -16,6 +16,7 @@ import {
   getAssamRainfallFieldSequence,
   getAssamRainfallMetadata,
   getAssamSeasonalRainfallSummary,
+  getAssamTemperatureField,
   getAssamTemperatureMetadata,
   getAssamTemperatureSummary,
   getHealthStatus,
@@ -28,9 +29,13 @@ import {
   type RainfallFieldResponse,
   type RainfallMetadataResponse,
   type SeasonalRainfallSummary,
+  type TemperatureFieldResponse,
   type TemperatureMetadataResponse,
   type TemperatureSummaryResponse,
 } from "./services/api";
+
+
+type ClimateLayer = "rainfall" | "TMEAN" | "TMAX" | "TMIN";
 
 
 function App() {
@@ -61,15 +66,23 @@ function App() {
 
   const [rainfallField, setRainfallField] =
     useState<RainfallFieldResponse | null>(null);
+  const [temperatureField, setTemperatureField] =
+    useState<TemperatureFieldResponse | null>(null);
+
   const [fieldSequence, setFieldSequence] = useState<RainfallFieldResponse[]>(
     []
   );
+
+  const [activeClimateLayer, setActiveClimateLayer] =
+    useState<ClimateLayer>("rainfall");
 
   const [selectedFieldDate, setSelectedFieldDate] = useState("2025-05-30");
   const [sequenceStartDate, setSequenceStartDate] = useState("2025-05-24");
   const [sequenceEndDate, setSequenceEndDate] = useState("2025-06-07");
 
   const [isFieldLoading, setIsFieldLoading] = useState(false);
+  const [isTemperatureFieldLoading, setIsTemperatureFieldLoading] =
+    useState(false);
   const [isSequenceLoading, setIsSequenceLoading] = useState(false);
   const [isPlayingFieldAnimation, setIsPlayingFieldAnimation] = useState(false);
 
@@ -114,10 +127,15 @@ function App() {
           .toISOString()
           .slice(0, 10);
 
-        const [fieldData, sequenceData] = await Promise.all([
-          getAssamRainfallField(defaultFieldDate),
-          getAssamRainfallFieldSequence(sequenceStart, sequenceEnd),
-        ]);
+        const [fieldData, sequenceData, temperatureFieldData] =
+          await Promise.all([
+            getAssamRainfallField(defaultFieldDate),
+            getAssamRainfallFieldSequence(sequenceStart, sequenceEnd),
+            getAssamTemperatureField(
+              temperatureSummaryData.peak_tmax_day,
+              "TMAX"
+            ),
+          ]);
 
         setHealth(healthData);
 
@@ -131,6 +149,7 @@ function App() {
         setTemperatureMetadata(temperatureMetadataData);
         setTemperatureSummary(temperatureSummaryData);
         setMonthlyTemperature(monthlyTemperatureData);
+        setTemperatureField(temperatureFieldData);
 
         setRainfallField(fieldData);
         setFieldSequence(sequenceData.fields);
@@ -349,6 +368,36 @@ function App() {
     }
   }
 
+  async function handleTemperatureLayerChange(layer: ClimateLayer) {
+    try {
+      setError(null);
+      setActiveClimateLayer(layer);
+
+      if (layer === "rainfall") {
+        return;
+      }
+
+      setIsTemperatureFieldLoading(true);
+
+      const temperatureDate =
+        temperatureSummary?.peak_tmax_day ??
+        temperatureMetadata?.end_date ??
+        "2025-07-24";
+
+      const fieldData = await getAssamTemperatureField(temperatureDate, layer);
+
+      setTemperatureField(fieldData);
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Failed to load temperature field."
+      );
+    } finally {
+      setIsTemperatureFieldLoading(false);
+    }
+  }
+
   async function loadSequence(startDate: string, endDate: string) {
     try {
       setError(null);
@@ -391,6 +440,7 @@ function App() {
     }
 
     await handleFieldDateChange(rainfallStats.maxRainfallDay.date);
+    setActiveClimateLayer("rainfall");
   }
 
   async function handleLoadPeakRainfallSequence() {
@@ -401,6 +451,7 @@ function App() {
     }
 
     await loadSequence(peakWindow.startDate, peakWindow.endDate);
+    setActiveClimateLayer("rainfall");
   }
 
   function showSequenceField(index: number) {
@@ -630,15 +681,7 @@ function App() {
         )}
 
         {seasonalRainfallSummary.length > 0 && (
-          <section
-            style={{
-              background: "#ffffff",
-              border: "1px solid #e5e7eb",
-              borderRadius: "16px",
-              padding: "20px",
-              marginBottom: "20px",
-            }}
-          >
+          <section style={whitePanelStyle}>
             <h2 style={sectionTitleStyle}>Seasonal Rainfall Intelligence</h2>
 
             <p style={sectionSubtitleStyle}>
@@ -721,15 +764,7 @@ function App() {
         )}
 
         {temperatureSummary && (
-          <section
-            style={{
-              background: "#ffffff",
-              border: "1px solid #e5e7eb",
-              borderRadius: "16px",
-              padding: "20px",
-              marginBottom: "20px",
-            }}
-          >
+          <section style={whitePanelStyle}>
             <h2 style={sectionTitleStyle}>Temperature Intelligence</h2>
 
             <p style={sectionSubtitleStyle}>
@@ -1010,7 +1045,7 @@ function App() {
                   fontWeight: 800,
                 }}
               >
-                Spatial Rainfall State Animation
+                Spatial Climate State Map
               </h2>
 
               <p
@@ -1020,8 +1055,8 @@ function App() {
                   fontSize: "15px",
                 }}
               >
-                Preload a date range, then animate rainfall fields from frontend
-                memory.
+                Switch between rainfall and temperature grid layers on the same
+                Assam boundary-clipped MapLibre view.
               </p>
 
               {rainfallMetadata && (
@@ -1033,15 +1068,14 @@ function App() {
                     fontWeight: 500,
                   }}
                 >
-                  Dataset coverage: {rainfallMetadata.start_date} to{" "}
+                  Rainfall coverage: {rainfallMetadata.start_date} to{" "}
                   {rainfallMetadata.end_date} · {rainfallMetadata.day_count}{" "}
                   days · {rainfallMetadata.average_valid_grid_cells_per_day}{" "}
-                  average valid Assam cells/day ·{" "}
-                  {rainfallMetadata.processing_level}
+                  average valid Assam cells/day.
                 </p>
               )}
 
-              {selectedRainfallAnomaly && (
+              {temperatureField && activeClimateLayer !== "rainfall" && (
                 <p
                   style={{
                     margin: "6px 0 0",
@@ -1050,7 +1084,24 @@ function App() {
                     fontWeight: 500,
                   }}
                 >
-                  Selected day intelligence:{" "}
+                  Temperature layer: {temperatureField.variable} ·{" "}
+                  {temperatureField.date} · mean{" "}
+                  {temperatureField.temperature_mean_c.toFixed(2)} °C · range{" "}
+                  {temperatureField.temperature_min_c.toFixed(2)}–
+                  {temperatureField.temperature_max_c.toFixed(2)} °C.
+                </p>
+              )}
+
+              {selectedRainfallAnomaly && activeClimateLayer === "rainfall" && (
+                <p
+                  style={{
+                    margin: "6px 0 0",
+                    color: "#4b5563",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                  }}
+                >
+                  Rainfall day intelligence:{" "}
                   {formatRainfallClass(
                     selectedRainfallAnomaly.rainfall_intensity_class
                   )}{" "}
@@ -1073,10 +1124,69 @@ function App() {
                 fontWeight: 700,
               }}
             >
-              {fieldSequence.length > 0 && currentSequenceIndex >= 0
+              {activeClimateLayer === "rainfall" &&
+              fieldSequence.length > 0 &&
+              currentSequenceIndex >= 0
                 ? `Frame ${currentSequenceIndex + 1} / ${fieldSequence.length}`
-                : "No sequence loaded"}
+                : `Layer: ${activeClimateLayer}`}
             </p>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "12px",
+              alignItems: "end",
+              marginBottom: "16px",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => handleTemperatureLayerChange("rainfall")}
+              style={getLayerButtonStyle(activeClimateLayer === "rainfall")}
+            >
+              Rainfall
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTemperatureLayerChange("TMEAN")}
+              disabled={isTemperatureFieldLoading}
+              style={getLayerButtonStyle(activeClimateLayer === "TMEAN")}
+            >
+              TMEAN
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTemperatureLayerChange("TMAX")}
+              disabled={isTemperatureFieldLoading}
+              style={getLayerButtonStyle(activeClimateLayer === "TMAX")}
+            >
+              TMAX
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTemperatureLayerChange("TMIN")}
+              disabled={isTemperatureFieldLoading}
+              style={getLayerButtonStyle(activeClimateLayer === "TMIN")}
+            >
+              TMIN
+            </button>
+
+            {isTemperatureFieldLoading && (
+              <span
+                style={{
+                  color: "#4b5563",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                }}
+              >
+                Loading temperature layer...
+              </span>
+            )}
           </div>
 
           <div
@@ -1168,9 +1278,10 @@ function App() {
 
             <button
               type="button"
-              onClick={() =>
-                setIsPlayingFieldAnimation((currentValue) => !currentValue)
-              }
+              onClick={() => {
+                setActiveClimateLayer("rainfall");
+                setIsPlayingFieldAnimation((currentValue) => !currentValue);
+              }}
               disabled={fieldSequence.length === 0}
               style={{
                 ...secondaryButtonStyle,
@@ -1183,7 +1294,7 @@ function App() {
             </button>
 
             <label style={labelStyle}>
-              Single date
+              Single rainfall date
               <input
                 type="date"
                 value={selectedFieldDate}
@@ -1209,12 +1320,15 @@ function App() {
             Loading rainfall field...
           </section>
         ) : (
-          rainfallField && (
-            <>
-              <RainfallMap data={rainfallField} />
-              <RainfallFieldPreview data={rainfallField} />
-            </>
-          )
+          <ClimateMap
+            rainfallData={rainfallField}
+            temperatureData={temperatureField}
+            activeLayer={activeClimateLayer}
+          />
+        )}
+
+        {activeClimateLayer === "rainfall" && rainfallField && (
+          <RainfallFieldPreview data={rainfallField} />
         )}
 
         {error && (
@@ -1368,6 +1482,25 @@ function formatSeason(value: string): string {
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 }
+
+
+function getLayerButtonStyle(isActive: boolean) {
+  return {
+    ...secondaryButtonStyle,
+    background: isActive ? "#111827" : "#ffffff",
+    color: isActive ? "#ffffff" : "#111827",
+    borderColor: isActive ? "#111827" : "#d1d5db",
+  } as const;
+}
+
+
+const whitePanelStyle = {
+  background: "#ffffff",
+  border: "1px solid #e5e7eb",
+  borderRadius: "16px",
+  padding: "20px",
+  marginBottom: "20px",
+} as const;
 
 
 const sectionTitleStyle = {

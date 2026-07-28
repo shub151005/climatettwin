@@ -1,12 +1,15 @@
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
 import xarray as xr
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from app.schemas.temperature import (
     DailyTemperatureSummary,
     MonthlyTemperatureSummary,
+    TemperatureFieldCell,
+    TemperatureFieldResponse,
     TemperatureMetadataResponse,
     TemperatureSummaryResponse,
 )
@@ -40,6 +43,8 @@ ASSAM_TEMPERATURE_NETCDF_FILE = (
     / "temperature"
     / "assam_temperature_2025_clipped.nc"
 )
+
+ALLOWED_TEMPERATURE_VARIABLES = {"TMIN", "TMAX", "TMEAN", "DTR"}
 
 
 @router.get(
@@ -89,6 +94,7 @@ def get_assam_daily_temperature_summary() -> list[DailyTemperatureSummary]:
         )
 
     dataframe = pd.read_csv(DAILY_SUMMARY_FILE)
+
     return [
         DailyTemperatureSummary(**record)
         for record in dataframe.to_dict(orient="records")
@@ -107,6 +113,7 @@ def get_assam_monthly_temperature_summary() -> list[MonthlyTemperatureSummary]:
         )
 
     dataframe = pd.read_csv(MONTHLY_SUMMARY_FILE)
+
     return [
         MonthlyTemperatureSummary(**record)
         for record in dataframe.to_dict(orient="records")
@@ -151,4 +158,80 @@ def get_assam_temperature_summary() -> TemperatureSummaryResponse:
         coldest_tmin_mean_c=round(float(coldest_tmin_day["tmin_mean_c"]), 2),
         warmest_night_day=pd.to_datetime(warmest_night_day["date"]).date(),
         warmest_night_tmin_c=round(float(warmest_night_day["tmin_mean_c"]), 2),
+    )
+
+
+@router.get(
+    "/temperature/assam/field",
+    response_model=TemperatureFieldResponse,
+)
+def get_assam_temperature_field(
+    selected_date: date = Query(
+        default=date(2025, 7, 24),
+        description="Date to extract temperature field for.",
+    ),
+    variable: str = Query(
+        default="TMEAN",
+        description="Temperature variable: TMIN, TMAX, TMEAN, or DTR.",
+    ),
+) -> TemperatureFieldResponse:
+    if not ASSAM_TEMPERATURE_NETCDF_FILE.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Temperature NetCDF file not found: {ASSAM_TEMPERATURE_NETCDF_FILE}",
+        )
+
+    selected_variable = variable.upper()
+
+    if selected_variable not in ALLOWED_TEMPERATURE_VARIABLES:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Invalid temperature variable. "
+                "Use one of: TMIN, TMAX, TMEAN, DTR."
+            ),
+        )
+
+    dataset = xr.open_dataset(ASSAM_TEMPERATURE_NETCDF_FILE)
+
+    available_dates = pd.to_datetime(dataset["TIME"].values).date
+
+    if selected_date not in available_dates:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Selected date not available in temperature dataset: {selected_date}",
+        )
+
+    selected_field = dataset[selected_variable].sel(TIME=str(selected_date))
+    selected_dataframe = selected_field.to_dataframe(name="temperature_c").reset_index()
+    selected_dataframe = selected_dataframe.dropna(subset=["temperature_c"])
+
+    if selected_dataframe.empty:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"No valid {selected_variable} temperature cells found for "
+                f"{selected_date}."
+            ),
+        )
+
+    cells = [
+        TemperatureFieldCell(
+            latitude=round(float(record["LATITUDE"]), 4),
+            longitude=round(float(record["LONGITUDE"]), 4),
+            temperature_c=round(float(record["temperature_c"]), 2),
+        )
+        for record in selected_dataframe.to_dict(orient="records")
+    ]
+
+    return TemperatureFieldResponse(
+        region="Assam",
+        date=selected_date,
+        variable=selected_variable,
+        unit="degree Celsius",
+        cell_count=len(cells),
+        temperature_min_c=round(float(selected_dataframe["temperature_c"].min()), 2),
+        temperature_max_c=round(float(selected_dataframe["temperature_c"].max()), 2),
+        temperature_mean_c=round(float(selected_dataframe["temperature_c"].mean()), 2),
+        cells=cells,
     )

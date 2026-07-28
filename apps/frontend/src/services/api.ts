@@ -210,6 +210,24 @@ export interface TemperatureSummaryResponse {
   warmest_night_tmin_c: number;
 }
 
+export interface TemperatureFieldCell {
+  latitude: number;
+  longitude: number;
+  temperature_c: number;
+}
+
+export interface TemperatureFieldResponse {
+  region: string;
+  date: string;
+  variable: string;
+  unit: string;
+  cell_count: number;
+  temperature_min_c: number;
+  temperature_max_c: number;
+  temperature_mean_c: number;
+  cells: TemperatureFieldCell[];
+}
+
 async function fetchJson<T>(url: string): Promise<T> {
   const response = await fetch(url);
 
@@ -331,5 +349,19 @@ export async function getAssamTemperatureSummary(): Promise<
 > {
   return fetchJson<TemperatureSummaryResponse>(
     `${API_BASE_URL}/api/v1/temperature/assam/summary`
+  );
+}
+
+export async function getAssamTemperatureField(
+  selectedDate = "2025-07-24",
+  variable = "TMEAN"
+): Promise<TemperatureFieldResponse> {
+  const searchParams = new URLSearchParams({
+    selected_date: selectedDate,
+    variable,
+  });
+
+  return fetchJson<TemperatureFieldResponse>(
+    `${API_BASE_URL}/api/v1/temperature/assam/field?${searchParams.toString()}`
   );
 }
