@@ -651,6 +651,100 @@ function App() {
 
         <section
           style={{
+            background: "#111827",
+            border: "1px solid #1f2937",
+            borderRadius: "18px",
+            padding: "22px",
+            marginBottom: "20px",
+            color: "#ffffff",
+          }}
+        >
+          <p
+            style={{
+              margin: "0 0 8px",
+              color: "#93c5fd",
+              fontSize: "13px",
+              fontWeight: 900,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+            }}
+          >
+            ClimateTwin V1 System Status
+          </p>
+
+          <h2
+            style={{
+              margin: "0 0 12px",
+              fontSize: "24px",
+              fontWeight: 900,
+            }}
+          >
+            Real Data Engineering + Geospatial Climate Intelligence Pipeline
+          </h2>
+
+          <p
+            style={{
+              margin: "0 0 18px",
+              color: "#d1d5db",
+              fontSize: "15px",
+              lineHeight: 1.7,
+              maxWidth: "980px",
+            }}
+          >
+            This build is not a weather API wrapper. It ingests real gridded IMD
+            rainfall and temperature datasets, converts and processes raw climate
+            files, clips them to the Assam boundary, derives analytical summaries,
+            exposes backend APIs, and visualizes spatial climate layers through
+            an interactive MapLibre dashboard.
+          </p>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+              gap: "14px",
+            }}
+          >
+            <SystemStatusCard
+              title="Data Sources"
+              items={[
+                "IMD rainfall grid",
+                "IMD TMIN/TMAX grids",
+                "Assam boundary GeoJSON",
+              ]}
+            />
+
+            <SystemStatusCard
+              title="Processing"
+              items={[
+                "GRD/NetCDF conversion",
+                "Assam bbox extraction",
+                "Boundary clipping",
+              ]}
+            />
+
+            <SystemStatusCard
+              title="Analytics"
+              items={[
+                "Rainfall anomalies",
+                "Seasonal rainfall share",
+                "Heat and warm-night signals",
+              ]}
+            />
+
+            <SystemStatusCard
+              title="Spatial System"
+              items={[
+                "MapLibre map layer",
+                "Rainfall/temperature switch",
+                "Popups and dynamic legends",
+              ]}
+            />
+          </div>
+        </section>
+
+        <section
+          style={{
             display: "grid",
             gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
             gap: "16px",
@@ -1532,6 +1626,59 @@ function MetricCard({ label, value, helper }: MetricCardProps) {
       >
         {helper}
       </p>
+    </article>
+  );
+}
+
+
+interface SystemStatusCardProps {
+  title: string;
+  items: string[];
+}
+
+
+function SystemStatusCard({ title, items }: SystemStatusCardProps) {
+  return (
+    <article
+      style={{
+        background: "rgba(255, 255, 255, 0.06)",
+        border: "1px solid rgba(255, 255, 255, 0.12)",
+        borderRadius: "14px",
+        padding: "16px",
+      }}
+    >
+      <h3
+        style={{
+          margin: "0 0 10px",
+          color: "#ffffff",
+          fontSize: "15px",
+          fontWeight: 900,
+        }}
+      >
+        {title}
+      </h3>
+
+      <div
+        style={{
+          display: "grid",
+          gap: "7px",
+        }}
+      >
+        {items.map((item) => (
+          <p
+            key={`${title}-${item}`}
+            style={{
+              margin: 0,
+              color: "#d1d5db",
+              fontSize: "13px",
+              lineHeight: 1.5,
+              fontWeight: 600,
+            }}
+          >
+            ✓ {item}
+          </p>
+        ))}
+      </div>
     </article>
   );
 }
