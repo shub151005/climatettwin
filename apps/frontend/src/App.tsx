@@ -45,27 +45,34 @@ function App() {
   const [monthlyRainfall, setMonthlyRainfall] = useState<
     MonthlyRainfallSummary[]
   >([]);
+
   const [rainfallAnomalies, setRainfallAnomalies] = useState<
     DailyRainfallAnomaly[]
   >([]);
+
   const [rainfallAnomalySummary, setRainfallAnomalySummary] =
     useState<RainfallAnomalySummaryResponse | null>(null);
+
   const [seasonalRainfallSummary, setSeasonalRainfallSummary] = useState<
     SeasonalRainfallSummary[]
   >([]);
+
   const [rainfallMetadata, setRainfallMetadata] =
     useState<RainfallMetadataResponse | null>(null);
 
   const [temperatureMetadata, setTemperatureMetadata] =
     useState<TemperatureMetadataResponse | null>(null);
+
   const [temperatureSummary, setTemperatureSummary] =
     useState<TemperatureSummaryResponse | null>(null);
+
   const [monthlyTemperature, setMonthlyTemperature] = useState<
     MonthlyTemperatureSummary[]
   >([]);
 
   const [rainfallField, setRainfallField] =
     useState<RainfallFieldResponse | null>(null);
+
   const [temperatureField, setTemperatureField] =
     useState<TemperatureFieldResponse | null>(null);
 
@@ -84,12 +91,16 @@ function App() {
   const [sequenceEndDate, setSequenceEndDate] = useState("2025-06-07");
 
   const [isFieldLoading, setIsFieldLoading] = useState(false);
+
   const [isTemperatureFieldLoading, setIsTemperatureFieldLoading] =
     useState(false);
+
   const [isSequenceLoading, setIsSequenceLoading] = useState(false);
+
   const [isPlayingFieldAnimation, setIsPlayingFieldAnimation] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
+
 
   useEffect(() => {
     async function loadInitialData() {
@@ -173,6 +184,7 @@ function App() {
     loadInitialData();
   }, []);
 
+
   const rainfallStats = useMemo(() => {
     if (rainfall.length === 0) {
       return {
@@ -202,6 +214,7 @@ function App() {
     };
   }, [rainfall]);
 
+
   const selectedRainfallAnomaly = useMemo(() => {
     if (!rainfallField) {
       return null;
@@ -213,6 +226,7 @@ function App() {
       ) ?? null
     );
   }, [rainfallAnomalies, rainfallField]);
+
 
   const peakRainfallAnomaly = useMemo(() => {
     if (!rainfallStats.maxRainfallDay) {
@@ -226,6 +240,7 @@ function App() {
     );
   }, [rainfallAnomalies, rainfallStats.maxRainfallDay]);
 
+
   const dominantSeason = useMemo(() => {
     if (seasonalRainfallSummary.length === 0) {
       return null;
@@ -237,6 +252,7 @@ function App() {
         : maxSeason;
     }, seasonalRainfallSummary[0]);
   }, [seasonalRainfallSummary]);
+
 
   const climateInterpretation = useMemo(() => {
     if (
@@ -303,6 +319,7 @@ function App() {
     monthlyTemperature,
   ]);
 
+
   function getCurrentSequenceIndex(): number {
     if (!rainfallField || fieldSequence.length === 0) {
       return -1;
@@ -310,6 +327,7 @@ function App() {
 
     return fieldSequence.findIndex((field) => field.date === rainfallField.date);
   }
+
 
   function clampDateToMetadata(dateValue: Date): string {
     const isoDate = dateValue.toISOString().slice(0, 10);
@@ -328,6 +346,7 @@ function App() {
 
     return isoDate;
   }
+
 
   function getPeakRainfallSequenceWindow(): {
     startDate: string;
@@ -351,6 +370,7 @@ function App() {
     };
   }
 
+
   async function handleFieldDateChange(dateValue: string) {
     try {
       setError(null);
@@ -372,6 +392,7 @@ function App() {
       setIsFieldLoading(false);
     }
   }
+
 
   async function handleTemperatureLayerChange(layer: ClimateLayer) {
     try {
@@ -401,6 +422,7 @@ function App() {
     }
   }
 
+
   async function handleLoadTemperatureField() {
     const selectedLayer =
       activeClimateLayer === "rainfall" ? "TMEAN" : activeClimateLayer;
@@ -426,6 +448,7 @@ function App() {
       setIsTemperatureFieldLoading(false);
     }
   }
+
 
   async function loadSequence(startDate: string, endDate: string) {
     try {
@@ -460,9 +483,11 @@ function App() {
     }
   }
 
+
   async function handleLoadSequence() {
     await loadSequence(sequenceStartDate, sequenceEndDate);
   }
+
 
   async function handleShowPeakRainfallDay() {
     if (!rainfallStats.maxRainfallDay) {
@@ -472,6 +497,7 @@ function App() {
     await handleFieldDateChange(rainfallStats.maxRainfallDay.date);
     setActiveClimateLayer("rainfall");
   }
+
 
   async function handleLoadPeakRainfallSequence() {
     const peakWindow = getPeakRainfallSequenceWindow();
@@ -483,6 +509,7 @@ function App() {
     await loadSequence(peakWindow.startDate, peakWindow.endDate);
     setActiveClimateLayer("rainfall");
   }
+
 
   function showSequenceField(index: number) {
     if (index < 0 || index >= fieldSequence.length) {
@@ -496,6 +523,7 @@ function App() {
     setActiveClimateLayer("rainfall");
   }
 
+
   function handlePreviousSequenceFrame() {
     const currentIndex = getCurrentSequenceIndex();
 
@@ -507,6 +535,7 @@ function App() {
     showSequenceField(currentIndex - 1);
   }
 
+
   function handleNextSequenceFrame() {
     const currentIndex = getCurrentSequenceIndex();
 
@@ -517,6 +546,7 @@ function App() {
 
     showSequenceField(currentIndex + 1);
   }
+
 
   useEffect(() => {
     if (!isPlayingFieldAnimation || fieldSequence.length === 0) {
@@ -554,8 +584,10 @@ function App() {
     };
   }, [isPlayingFieldAnimation, fieldSequence]);
 
+
   const currentSequenceIndex = getCurrentSequenceIndex();
   const peakRainfallSequenceWindow = getPeakRainfallSequenceWindow();
+
 
   return (
     <main
@@ -1067,7 +1099,7 @@ function App() {
               justifyContent: "space-between",
               gap: "16px",
               alignItems: "flex-start",
-              marginBottom: "16px",
+              marginBottom: "18px",
             }}
           >
             <div>
@@ -1086,6 +1118,7 @@ function App() {
                   margin: "8px 0 0",
                   color: "#4b5563",
                   fontSize: "15px",
+                  lineHeight: 1.6,
                 }}
               >
                 Switch between rainfall and temperature grid layers on the same
@@ -1154,217 +1187,251 @@ function App() {
                 margin: 0,
                 color: "#111827",
                 fontSize: "14px",
-                fontWeight: 700,
+                fontWeight: 800,
+                background: "#f9fafb",
+                border: "1px solid #e5e7eb",
+                borderRadius: "999px",
+                padding: "8px 12px",
               }}
             >
               {activeClimateLayer === "rainfall" &&
               fieldSequence.length > 0 &&
               currentSequenceIndex >= 0
-                ? `Frame ${currentSequenceIndex + 1} / ${fieldSequence.length}`
-                : `Layer: ${activeClimateLayer}`}
+                ? `Rainfall frame ${currentSequenceIndex + 1} / ${
+                    fieldSequence.length
+                  }`
+                : `Active layer: ${activeClimateLayer}`}
             </p>
           </div>
 
           <div
             style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "12px",
-              alignItems: "end",
-              marginBottom: "16px",
+              display: "grid",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              gap: "16px",
             }}
           >
-            <button
-              type="button"
-              onClick={() => handleTemperatureLayerChange("rainfall")}
-              style={getLayerButtonStyle(activeClimateLayer === "rainfall")}
-            >
-              Rainfall
-            </button>
+            <div style={controlPanelStyle}>
+              <div style={controlPanelHeaderStyle}>
+                <div>
+                  <h3 style={controlPanelTitleStyle}>
+                    Temperature Layer Controls
+                  </h3>
+                  <p style={controlPanelSubtitleStyle}>
+                    Load TMEAN, TMAX, or TMIN for a selected temperature date.
+                  </p>
+                </div>
+              </div>
 
-            <button
-              type="button"
-              onClick={() => handleTemperatureLayerChange("TMEAN")}
-              disabled={isTemperatureFieldLoading}
-              style={getLayerButtonStyle(activeClimateLayer === "TMEAN")}
-            >
-              TMEAN
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleTemperatureLayerChange("TMAX")}
-              disabled={isTemperatureFieldLoading}
-              style={getLayerButtonStyle(activeClimateLayer === "TMAX")}
-            >
-              TMAX
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleTemperatureLayerChange("TMIN")}
-              disabled={isTemperatureFieldLoading}
-              style={getLayerButtonStyle(activeClimateLayer === "TMIN")}
-            >
-              TMIN
-            </button>
-
-            <label style={labelStyle}>
-              Temperature date
-              <input
-                type="date"
-                value={selectedTemperatureDate}
-                min={temperatureMetadata?.start_date}
-                max={temperatureMetadata?.end_date}
-                onChange={(event) =>
-                  setSelectedTemperatureDate(event.target.value)
-                }
-                style={inputStyle}
-              />
-            </label>
-
-            <button
-              type="button"
-              onClick={handleLoadTemperatureField}
-              disabled={isTemperatureFieldLoading}
-              style={{
-                ...secondaryButtonStyle,
-                background: "#7f1d1d",
-                color: "#ffffff",
-                borderColor: "#7f1d1d",
-              }}
-            >
-              Load temperature
-            </button>
-
-            {isTemperatureFieldLoading && (
-              <span
+              <div
                 style={{
-                  color: "#4b5563",
-                  fontSize: "14px",
-                  fontWeight: 700,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "12px",
+                  alignItems: "end",
                 }}
               >
-                Loading temperature layer...
-              </span>
-            )}
-          </div>
+                <button
+                  type="button"
+                  onClick={() => handleTemperatureLayerChange("rainfall")}
+                  style={getLayerButtonStyle(activeClimateLayer === "rainfall")}
+                >
+                  Rainfall
+                </button>
 
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "12px",
-              alignItems: "end",
-            }}
-          >
-            <label style={labelStyle}>
-              Start date
-              <input
-                type="date"
-                value={sequenceStartDate}
-                min={rainfallMetadata?.start_date}
-                max={rainfallMetadata?.end_date}
-                onChange={(event) => setSequenceStartDate(event.target.value)}
-                style={inputStyle}
-              />
-            </label>
+                <button
+                  type="button"
+                  onClick={() => handleTemperatureLayerChange("TMEAN")}
+                  disabled={isTemperatureFieldLoading}
+                  style={getLayerButtonStyle(activeClimateLayer === "TMEAN")}
+                >
+                  TMEAN
+                </button>
 
-            <label style={labelStyle}>
-              End date
-              <input
-                type="date"
-                value={sequenceEndDate}
-                min={rainfallMetadata?.start_date}
-                max={rainfallMetadata?.end_date}
-                onChange={(event) => setSequenceEndDate(event.target.value)}
-                style={inputStyle}
-              />
-            </label>
+                <button
+                  type="button"
+                  onClick={() => handleTemperatureLayerChange("TMAX")}
+                  disabled={isTemperatureFieldLoading}
+                  style={getLayerButtonStyle(activeClimateLayer === "TMAX")}
+                >
+                  TMAX
+                </button>
 
-            <button
-              type="button"
-              onClick={handleLoadSequence}
-              disabled={isSequenceLoading}
-              style={secondaryButtonStyle}
-            >
-              {isSequenceLoading ? "Loading..." : "Load sequence"}
-            </button>
+                <button
+                  type="button"
+                  onClick={() => handleTemperatureLayerChange("TMIN")}
+                  disabled={isTemperatureFieldLoading}
+                  style={getLayerButtonStyle(activeClimateLayer === "TMIN")}
+                >
+                  TMIN
+                </button>
 
-            <button
-              type="button"
-              onClick={handleShowPeakRainfallDay}
-              disabled={!rainfallStats.maxRainfallDay || isFieldLoading}
-              style={{
-                ...secondaryButtonStyle,
-                background: "#111827",
-                color: "#ffffff",
-                borderColor: "#111827",
-              }}
-            >
-              Peak rainfall day
-            </button>
+                <label style={labelStyle}>
+                  Temperature date
+                  <input
+                    type="date"
+                    value={selectedTemperatureDate}
+                    min={temperatureMetadata?.start_date}
+                    max={temperatureMetadata?.end_date}
+                    onChange={(event) =>
+                      setSelectedTemperatureDate(event.target.value)
+                    }
+                    style={inputStyle}
+                  />
+                </label>
 
-            <button
-              type="button"
-              onClick={handleLoadPeakRainfallSequence}
-              disabled={!peakRainfallSequenceWindow || isSequenceLoading}
-              style={{
-                ...secondaryButtonStyle,
-                background: "#064e3b",
-                color: "#ffffff",
-                borderColor: "#064e3b",
-              }}
-            >
-              Peak sequence
-            </button>
+                <button
+                  type="button"
+                  onClick={handleLoadTemperatureField}
+                  disabled={isTemperatureFieldLoading}
+                  style={{
+                    ...secondaryButtonStyle,
+                    background: "#7f1d1d",
+                    color: "#ffffff",
+                    borderColor: "#7f1d1d",
+                  }}
+                >
+                  {isTemperatureFieldLoading ? "Loading..." : "Load temperature"}
+                </button>
+              </div>
+            </div>
 
-            <button
-              type="button"
-              onClick={handlePreviousSequenceFrame}
-              disabled={fieldSequence.length === 0}
-              style={secondaryButtonStyle}
-            >
-              Previous
-            </button>
+            <div style={controlPanelStyle}>
+              <div style={controlPanelHeaderStyle}>
+                <div>
+                  <h3 style={controlPanelTitleStyle}>
+                    Rainfall Animation Controls
+                  </h3>
+                  <p style={controlPanelSubtitleStyle}>
+                    Load a rainfall date range and animate the rainfall field
+                    sequence.
+                  </p>
+                </div>
+              </div>
 
-            <button
-              type="button"
-              onClick={handleNextSequenceFrame}
-              disabled={fieldSequence.length === 0}
-              style={secondaryButtonStyle}
-            >
-              Next
-            </button>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "12px",
+                  alignItems: "end",
+                }}
+              >
+                <label style={labelStyle}>
+                  Start date
+                  <input
+                    type="date"
+                    value={sequenceStartDate}
+                    min={rainfallMetadata?.start_date}
+                    max={rainfallMetadata?.end_date}
+                    onChange={(event) =>
+                      setSequenceStartDate(event.target.value)
+                    }
+                    style={inputStyle}
+                  />
+                </label>
 
-            <button
-              type="button"
-              onClick={() => {
-                setActiveClimateLayer("rainfall");
-                setIsPlayingFieldAnimation((currentValue) => !currentValue);
-              }}
-              disabled={fieldSequence.length === 0}
-              style={{
-                ...secondaryButtonStyle,
-                background: isPlayingFieldAnimation ? "#dc2626" : "#2563eb",
-                color: "#ffffff",
-                borderColor: isPlayingFieldAnimation ? "#dc2626" : "#2563eb",
-              }}
-            >
-              {isPlayingFieldAnimation ? "Pause" : "Play"}
-            </button>
+                <label style={labelStyle}>
+                  End date
+                  <input
+                    type="date"
+                    value={sequenceEndDate}
+                    min={rainfallMetadata?.start_date}
+                    max={rainfallMetadata?.end_date}
+                    onChange={(event) => setSequenceEndDate(event.target.value)}
+                    style={inputStyle}
+                  />
+                </label>
 
-            <label style={labelStyle}>
-              Single rainfall date
-              <input
-                type="date"
-                value={selectedFieldDate}
-                min={rainfallMetadata?.start_date}
-                max={rainfallMetadata?.end_date}
-                onChange={(event) => handleFieldDateChange(event.target.value)}
-                style={inputStyle}
-              />
-            </label>
+                <button
+                  type="button"
+                  onClick={handleLoadSequence}
+                  disabled={isSequenceLoading}
+                  style={secondaryButtonStyle}
+                >
+                  {isSequenceLoading ? "Loading..." : "Load sequence"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleShowPeakRainfallDay}
+                  disabled={!rainfallStats.maxRainfallDay || isFieldLoading}
+                  style={{
+                    ...secondaryButtonStyle,
+                    background: "#111827",
+                    color: "#ffffff",
+                    borderColor: "#111827",
+                  }}
+                >
+                  Peak rainfall day
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleLoadPeakRainfallSequence}
+                  disabled={!peakRainfallSequenceWindow || isSequenceLoading}
+                  style={{
+                    ...secondaryButtonStyle,
+                    background: "#064e3b",
+                    color: "#ffffff",
+                    borderColor: "#064e3b",
+                  }}
+                >
+                  Peak sequence
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePreviousSequenceFrame}
+                  disabled={fieldSequence.length === 0}
+                  style={secondaryButtonStyle}
+                >
+                  Previous
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleNextSequenceFrame}
+                  disabled={fieldSequence.length === 0}
+                  style={secondaryButtonStyle}
+                >
+                  Next
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveClimateLayer("rainfall");
+                    setIsPlayingFieldAnimation((currentValue) => !currentValue);
+                  }}
+                  disabled={fieldSequence.length === 0}
+                  style={{
+                    ...secondaryButtonStyle,
+                    background: isPlayingFieldAnimation ? "#dc2626" : "#2563eb",
+                    color: "#ffffff",
+                    borderColor: isPlayingFieldAnimation
+                      ? "#dc2626"
+                      : "#2563eb",
+                  }}
+                >
+                  {isPlayingFieldAnimation ? "Pause" : "Play"}
+                </button>
+
+                <label style={labelStyle}>
+                  Single rainfall date
+                  <input
+                    type="date"
+                    value={selectedFieldDate}
+                    min={rainfallMetadata?.start_date}
+                    max={rainfallMetadata?.end_date}
+                    onChange={(event) =>
+                      handleFieldDateChange(event.target.value)
+                    }
+                    style={inputStyle}
+                  />
+                </label>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -1579,6 +1646,39 @@ const sectionSubtitleStyle = {
   fontSize: "15px",
   lineHeight: 1.6,
   textAlign: "center",
+} as const;
+
+
+const controlPanelStyle = {
+  background: "#f9fafb",
+  border: "1px solid #e5e7eb",
+  borderRadius: "14px",
+  padding: "16px",
+} as const;
+
+
+const controlPanelHeaderStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: "12px",
+  alignItems: "flex-start",
+  marginBottom: "14px",
+} as const;
+
+
+const controlPanelTitleStyle = {
+  margin: 0,
+  color: "#111827",
+  fontSize: "16px",
+  fontWeight: 900,
+} as const;
+
+
+const controlPanelSubtitleStyle = {
+  margin: "5px 0 0",
+  color: "#6b7280",
+  fontSize: "13px",
+  lineHeight: 1.5,
 } as const;
 
 
