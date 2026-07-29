@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { MutableRefObject } from "react";
 import * as maplibregl from "maplibre-gl";
 import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import type { FeatureCollection, Geometry, Point, Polygon } from "geojson";
 
 import assamDistrictBoundaries from "../../data/geojson/assam-district-boundaries.json";
 import assamOuterBoundary from "../../data/geojson/assam-outer-boundary.json";
+
+import { SmoothClimateOverlay } from "./SmoothClimateOverlay";
 
 import type {
   RainfallFieldResponse,
@@ -33,21 +36,21 @@ const assamOuterBoundaryGeoJson =
 
 const rainfallLegendItems = [
   { label: "Trace", range: "≤ 0.1 mm", color: "#eff6ff" },
-  { label: "Light", range: "0.1–10 mm", color: "#bfdbfe" },
-  { label: "Moderate", range: "10–25 mm", color: "#60a5fa" },
-  { label: "Heavy", range: "25–50 mm", color: "#2563eb" },
-  { label: "Very Heavy", range: "50–100 mm", color: "#1d4ed8" },
-  { label: "Extreme", range: "≥ 100 mm", color: "#312e81" },
+  { label: "Light", range: "0.1–10 mm", color: "#38bdf8" },
+  { label: "Moderate", range: "10–25 mm", color: "#22c55e" },
+  { label: "Heavy", range: "25–50 mm", color: "#facc15" },
+  { label: "Very Heavy", range: "50–100 mm", color: "#fb923c" },
+  { label: "Extreme", range: "≥ 100 mm", color: "#ef4444" },
 ];
 
 
 const temperatureLegendItems = [
-  { label: "Very Cool", range: "< 15 °C", color: "#dbeafe" },
-  { label: "Cool", range: "15–22 °C", color: "#93c5fd" },
+  { label: "Very Cool", range: "< 15 °C", color: "#60a5fa" },
+  { label: "Cool", range: "15–22 °C", color: "#22d3ee" },
   { label: "Mild", range: "22–28 °C", color: "#facc15" },
   { label: "Warm", range: "28–32 °C", color: "#fb923c" },
-  { label: "Hot", range: "32–35 °C", color: "#ef4444" },
-  { label: "Very Hot", range: "≥ 35 °C", color: "#7f1d1d" },
+  { label: "Hot", range: "32–35 °C", color: "#f97316" },
+  { label: "Very Hot", range: "≥ 35 °C", color: "#dc2626" },
 ];
 
 
@@ -60,7 +63,19 @@ export function ClimateMap({
   const mapRef = useRef<MapLibreMap | null>(null);
   const popupRef = useRef<maplibregl.Popup | null>(null);
 
+  const latestRainfallDataRef = useRef<RainfallFieldResponse | null>(null);
+  const latestTemperatureDataRef = useRef<TemperatureFieldResponse | null>(null);
+
+  const [mapInstance, setMapInstance] = useState<MapLibreMap | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
+
+  useEffect(() => {
+    latestRainfallDataRef.current = rainfallData;
+  }, [rainfallData]);
+
+  useEffect(() => {
+    latestTemperatureDataRef.current = temperatureData;
+  }, [temperatureData]);
 
   const rainfallGeoJson = useMemo(() => {
     return buildRainfallGeoJson(rainfallData);
@@ -116,10 +131,10 @@ export function ClimateMap({
       style: {
         version: 8,
         sources: {
-          carto: {
+          cartoDark: {
             type: "raster",
             tiles: [
-              "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+              "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
             ],
             tileSize: 256,
             attribution: "© OpenStreetMap contributors © CARTO",
@@ -127,9 +142,12 @@ export function ClimateMap({
         },
         layers: [
           {
-            id: "carto",
+            id: "carto-dark",
             type: "raster",
-            source: "carto",
+            source: "cartoDark",
+            paint: {
+              "raster-opacity": 0.92,
+            },
           },
         ],
       },
@@ -141,6 +159,7 @@ export function ClimateMap({
     });
 
     mapRef.current = map;
+    setMapInstance(map);
 
     map.addControl(new maplibregl.NavigationControl(), "top-right");
 
@@ -166,40 +185,17 @@ export function ClimateMap({
       });
 
       map.addLayer({
-        id: "rainfall-field-fill",
+        id: "rainfall-field-click-target",
         type: "fill",
         source: "rainfall-field",
         paint: {
-          "fill-color": [
-            "case",
-            ["<=", ["get", "value"], 0.1],
-            "#eff6ff",
-            ["<", ["get", "value"], 10],
-            "#bfdbfe",
-            ["<", ["get", "value"], 25],
-            "#60a5fa",
-            ["<", ["get", "value"], 50],
-            "#2563eb",
-            ["<", ["get", "value"], 100],
-            "#1d4ed8",
-            "#312e81",
-          ],
-          "fill-opacity": 0.72,
+          "fill-color": "#ffffff",
+          "fill-opacity": 0.01,
         },
       });
 
       map.addLayer({
-        id: "rainfall-field-outline",
-        type: "line",
-        source: "rainfall-field",
-        paint: {
-          "line-color": "rgba(255,255,255,0.35)",
-          "line-width": 0.45,
-        },
-      });
-
-      map.addLayer({
-        id: "temperature-field-circle",
+        id: "temperature-field-click-target",
         type: "circle",
         source: "temperature-field",
         paint: {
@@ -208,29 +204,15 @@ export function ClimateMap({
             ["linear"],
             ["zoom"],
             5,
-            10,
+            12,
             7,
-            16,
+            18,
             9,
-            24,
+            28,
           ],
-          "circle-color": [
-            "case",
-            ["<", ["get", "value"], 15],
-            "#dbeafe",
-            ["<", ["get", "value"], 22],
-            "#93c5fd",
-            ["<", ["get", "value"], 28],
-            "#facc15",
-            ["<", ["get", "value"], 32],
-            "#fb923c",
-            ["<", ["get", "value"], 35],
-            "#ef4444",
-            "#7f1d1d",
-          ],
-          "circle-opacity": 0.88,
-          "circle-stroke-color": "#111827",
-          "circle-stroke-width": 1.5,
+          "circle-color": "#ffffff",
+          "circle-opacity": 0.01,
+          "circle-stroke-opacity": 0,
         },
       });
 
@@ -239,7 +221,7 @@ export function ClimateMap({
         type: "line",
         source: "assam-district-boundaries",
         paint: {
-          "line-color": "rgba(17,24,39,0.45)",
+          "line-color": "rgba(255,255,255,0.32)",
           "line-width": 0.8,
           "line-opacity": 0.75,
         },
@@ -250,32 +232,33 @@ export function ClimateMap({
         type: "line",
         source: "assam-outer-boundary",
         paint: {
-          "line-color": "#111827",
-          "line-width": 3.2,
-          "line-opacity": 0.98,
+          "line-color": "#f9fafb",
+          "line-width": 2.8,
+          "line-opacity": 0.95,
         },
       });
 
-      map.on("mouseenter", "rainfall-field-fill", () => {
+      map.on("mouseenter", "rainfall-field-click-target", () => {
         map.getCanvas().style.cursor = "pointer";
       });
 
-      map.on("mouseleave", "rainfall-field-fill", () => {
+      map.on("mouseleave", "rainfall-field-click-target", () => {
         map.getCanvas().style.cursor = "";
       });
 
-      map.on("mouseenter", "temperature-field-circle", () => {
+      map.on("mouseenter", "temperature-field-click-target", () => {
         map.getCanvas().style.cursor = "pointer";
       });
 
-      map.on("mouseleave", "temperature-field-circle", () => {
+      map.on("mouseleave", "temperature-field-click-target", () => {
         map.getCanvas().style.cursor = "";
       });
 
-      map.on("click", "rainfall-field-fill", (event) => {
+      map.on("click", "rainfall-field-click-target", (event) => {
         const feature = event.features?.[0];
+        const currentRainfallData = latestRainfallDataRef.current;
 
-        if (!feature || !event.lngLat || !rainfallData) {
+        if (!feature || !event.lngLat || !currentRainfallData) {
           return;
         }
 
@@ -294,7 +277,7 @@ export function ClimateMap({
           popupRef,
           event.lngLat,
           buildRainfallPopupHtml({
-            date: rainfallData.date,
+            date: currentRainfallData.date,
             rainfallMm,
             latitude,
             longitude,
@@ -302,10 +285,11 @@ export function ClimateMap({
         );
       });
 
-      map.on("click", "temperature-field-circle", (event) => {
+      map.on("click", "temperature-field-click-target", (event) => {
         const feature = event.features?.[0];
+        const currentTemperatureData = latestTemperatureDataRef.current;
 
-        if (!feature || !event.lngLat || !temperatureData) {
+        if (!feature || !event.lngLat || !currentTemperatureData) {
           return;
         }
 
@@ -316,7 +300,9 @@ export function ClimateMap({
           longitude?: number;
         };
 
-        const variable = String(properties.variable ?? temperatureData.variable);
+        const variable = String(
+          properties.variable ?? currentTemperatureData.variable
+        );
         const temperatureC = Number(properties.temperature_c ?? 0);
         const latitude = Number(properties.latitude ?? 0);
         const longitude = Number(properties.longitude ?? 0);
@@ -326,7 +312,7 @@ export function ClimateMap({
           popupRef,
           event.lngLat,
           buildTemperaturePopupHtml({
-            date: temperatureData.date,
+            date: currentTemperatureData.date,
             variable,
             temperatureC,
             latitude,
@@ -343,6 +329,7 @@ export function ClimateMap({
       popupRef.current = null;
       map.remove();
       mapRef.current = null;
+      setMapInstance(null);
       setIsMapReady(false);
     };
   }, []);
@@ -381,7 +368,7 @@ export function ClimateMap({
     popupRef.current?.remove();
     popupRef.current = null;
 
-    applyLayerVisibility(map, activeLayer);
+    applyClickLayerVisibility(map, activeLayer);
 
     if (activeLayer === "rainfall") {
       fitMapToPolygonGeoJson(map, rainfallGeoJson);
@@ -394,29 +381,45 @@ export function ClimateMap({
     <section
       style={{
         marginTop: "24px",
-        background: "#ffffff",
-        border: "1px solid #e5e7eb",
-        borderRadius: "16px",
+        background: "#020617",
+        border: "1px solid rgba(148, 163, 184, 0.25)",
+        borderRadius: "18px",
         overflow: "hidden",
+        boxShadow: "0 24px 70px rgba(2, 6, 23, 0.45)",
       }}
     >
       <div
         style={{
           padding: "16px 18px",
-          borderBottom: "1px solid #e5e7eb",
+          borderBottom: "1px solid rgba(148, 163, 184, 0.22)",
           display: "flex",
           justifyContent: "space-between",
           gap: "16px",
           alignItems: "center",
+          background:
+            "linear-gradient(135deg, rgba(15,23,42,0.98), rgba(30,41,59,0.94))",
         }}
       >
         <div>
+          <p
+            style={{
+              margin: "0 0 6px",
+              color: "#38bdf8",
+              fontSize: "12px",
+              fontWeight: 900,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+            }}
+          >
+            Smooth Climate Field
+          </p>
+
           <h2
             style={{
               margin: 0,
-              color: "#111827",
-              fontSize: "20px",
-              fontWeight: 800,
+              color: "#f9fafb",
+              fontSize: "21px",
+              fontWeight: 900,
             }}
           >
             Climate Spatial Layer — Assam
@@ -424,15 +427,16 @@ export function ClimateMap({
 
           <p
             style={{
-              margin: "6px 0 0",
-              color: "#4b5563",
+              margin: "7px 0 0",
+              color: "#cbd5e1",
               fontSize: "14px",
               lineHeight: 1.5,
+              maxWidth: "820px",
             }}
           >
-            Rainfall is rendered as 0.25° grid cells. Temperature is rendered as
-            coarse 1° grid-center markers. Click any cell or marker to inspect
-            its value.
+            Raw IMD grid values are rendered as smooth atmospheric patches over
+            the Assam boundary. Click any cell/marker target to inspect exact
+            source-grid values.
           </p>
         </div>
 
@@ -440,17 +444,18 @@ export function ClimateMap({
           <div
             style={{
               textAlign: "right",
-              color: "#111827",
+              color: "#f9fafb",
               fontSize: "13px",
-              fontWeight: 700,
+              fontWeight: 800,
               lineHeight: 1.6,
+              minWidth: "180px",
             }}
           >
             <div>
               {activeStats.title} · {activeStats.date}
             </div>
             <div>{activeStats.value}</div>
-            <div style={{ color: "#6b7280" }}>
+            <div style={{ color: "#cbd5e1" }}>
               Range {activeStats.range} · {activeStats.cells} cells
             </div>
           </div>
@@ -461,15 +466,26 @@ export function ClimateMap({
         style={{
           position: "relative",
           width: "100%",
-          height: "520px",
+          height: "620px",
+          background: "#020617",
         }}
       >
         <div
           ref={mapContainerRef}
           style={{
+            position: "absolute",
+            inset: 0,
             width: "100%",
             height: "100%",
           }}
+        />
+
+        <SmoothClimateOverlay
+          map={mapInstance}
+          isMapReady={isMapReady}
+          activeLayer={activeLayer}
+          rainfallData={rainfallData}
+          temperatureData={temperatureData}
         />
 
         <MapLegend
@@ -501,19 +517,20 @@ function MapLegend({ title, items, activeLayer }: MapLegendProps) {
         position: "absolute",
         left: "16px",
         bottom: "16px",
-        background: "rgba(255, 255, 255, 0.94)",
-        border: "1px solid #e5e7eb",
+        background: "rgba(15, 23, 42, 0.88)",
+        border: "1px solid rgba(148, 163, 184, 0.35)",
         borderRadius: "14px",
         padding: "12px",
-        minWidth: "190px",
-        boxShadow: "0 10px 30px rgba(15, 23, 42, 0.15)",
-        zIndex: 2,
+        minWidth: "205px",
+        boxShadow: "0 18px 40px rgba(2, 6, 23, 0.45)",
+        backdropFilter: "blur(14px)",
+        zIndex: 3,
       }}
     >
       <p
         style={{
           margin: "0 0 8px",
-          color: "#111827",
+          color: "#f9fafb",
           fontSize: "13px",
           fontWeight: 900,
         }}
@@ -543,13 +560,13 @@ function MapLegend({ title, items, activeLayer }: MapLegendProps) {
                 height: "12px",
                 borderRadius: activeLayer === "rainfall" ? "3px" : "999px",
                 background: item.color,
-                border: "1px solid rgba(17, 24, 39, 0.25)",
+                border: "1px solid rgba(255, 255, 255, 0.4)",
               }}
             />
 
             <span
               style={{
-                color: "#111827",
+                color: "#e5e7eb",
                 fontSize: "12px",
                 fontWeight: 800,
               }}
@@ -559,7 +576,7 @@ function MapLegend({ title, items, activeLayer }: MapLegendProps) {
 
             <span
               style={{
-                color: "#4b5563",
+                color: "#cbd5e1",
                 fontSize: "11px",
                 fontWeight: 700,
               }}
@@ -574,29 +591,21 @@ function MapLegend({ title, items, activeLayer }: MapLegendProps) {
 }
 
 
-function applyLayerVisibility(map: MapLibreMap, activeLayer: ClimateLayer) {
+function applyClickLayerVisibility(map: MapLibreMap, activeLayer: ClimateLayer) {
   const rainfallVisibility = activeLayer === "rainfall" ? "visible" : "none";
   const temperatureVisibility = activeLayer === "rainfall" ? "none" : "visible";
 
-  if (map.getLayer("rainfall-field-fill")) {
+  if (map.getLayer("rainfall-field-click-target")) {
     map.setLayoutProperty(
-      "rainfall-field-fill",
+      "rainfall-field-click-target",
       "visibility",
       rainfallVisibility
     );
   }
 
-  if (map.getLayer("rainfall-field-outline")) {
+  if (map.getLayer("temperature-field-click-target")) {
     map.setLayoutProperty(
-      "rainfall-field-outline",
-      "visibility",
-      rainfallVisibility
-    );
-  }
-
-  if (map.getLayer("temperature-field-circle")) {
-    map.setLayoutProperty(
-      "temperature-field-circle",
+      "temperature-field-click-target",
       "visibility",
       temperatureVisibility
     );
@@ -679,7 +688,7 @@ function buildTemperatureGeoJson(
 
 function showPopup(
   map: MapLibreMap,
-  popupRef: React.MutableRefObject<maplibregl.Popup | null>,
+  popupRef: MutableRefObject<maplibregl.Popup | null>,
   lngLat: maplibregl.LngLat,
   html: string
 ) {
@@ -689,6 +698,7 @@ function showPopup(
     closeButton: true,
     closeOnClick: true,
     maxWidth: "280px",
+    className: "climate-popup",
   })
     .setLngLat(lngLat)
     .setHTML(html)
@@ -709,8 +719,8 @@ function buildRainfallPopupHtml({
 }) {
   return `
     <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
-      <div style="font-size: 12px; font-weight: 800; color: #2563eb; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
-        Rainfall Cell
+      <div style="font-size: 12px; font-weight: 900; color: #0284c7; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
+        Rainfall Source Cell
       </div>
 
       <div style="font-size: 16px; font-weight: 900; color: #111827; margin-bottom: 8px;">
@@ -742,8 +752,8 @@ function buildTemperaturePopupHtml({
 }) {
   return `
     <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
-      <div style="font-size: 12px; font-weight: 800; color: #b91c1c; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
-        Temperature Marker
+      <div style="font-size: 12px; font-weight: 900; color: #b91c1c; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
+        Temperature Source Cell
       </div>
 
       <div style="font-size: 16px; font-weight: 900; color: #111827; margin-bottom: 8px;">
@@ -822,8 +832,8 @@ function fitMapToCoordinates(
   );
 
   map.fitBounds(bounds, {
-    padding: 64,
+    padding: 72,
     duration: 500,
-    maxZoom: 7.2,
+    maxZoom: 7.3,
   });
 }
