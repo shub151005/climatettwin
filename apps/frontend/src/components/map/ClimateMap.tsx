@@ -31,6 +31,26 @@ const assamOuterBoundaryGeoJson =
   assamOuterBoundary as FeatureCollection<Geometry>;
 
 
+const rainfallLegendItems = [
+  { label: "Trace", range: "≤ 0.1 mm", color: "#eff6ff" },
+  { label: "Light", range: "0.1–10 mm", color: "#bfdbfe" },
+  { label: "Moderate", range: "10–25 mm", color: "#60a5fa" },
+  { label: "Heavy", range: "25–50 mm", color: "#2563eb" },
+  { label: "Very Heavy", range: "50–100 mm", color: "#1d4ed8" },
+  { label: "Extreme", range: "≥ 100 mm", color: "#312e81" },
+];
+
+
+const temperatureLegendItems = [
+  { label: "Very Cool", range: "< 15 °C", color: "#dbeafe" },
+  { label: "Cool", range: "15–22 °C", color: "#93c5fd" },
+  { label: "Mild", range: "22–28 °C", color: "#facc15" },
+  { label: "Warm", range: "28–32 °C", color: "#fb923c" },
+  { label: "Hot", range: "32–35 °C", color: "#ef4444" },
+  { label: "Very Hot", range: "≥ 35 °C", color: "#7f1d1d" },
+];
+
+
 export function ClimateMap({
   rainfallData,
   temperatureData,
@@ -77,6 +97,14 @@ export function ClimateMap({
 
     return null;
   }, [activeLayer, rainfallData, temperatureData]);
+
+  const legendItems =
+    activeLayer === "rainfall" ? rainfallLegendItems : temperatureLegendItems;
+
+  const legendTitle =
+    activeLayer === "rainfall"
+      ? "Rainfall Intensity"
+      : `${activeLayer} Temperature`;
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) {
@@ -430,13 +458,118 @@ export function ClimateMap({
       </div>
 
       <div
-        ref={mapContainerRef}
         style={{
+          position: "relative",
           width: "100%",
           height: "520px",
         }}
-      />
+      >
+        <div
+          ref={mapContainerRef}
+          style={{
+            width: "100%",
+            height: "100%",
+          }}
+        />
+
+        <MapLegend
+          title={legendTitle}
+          items={legendItems}
+          activeLayer={activeLayer}
+        />
+      </div>
     </section>
+  );
+}
+
+
+interface MapLegendProps {
+  title: string;
+  items: {
+    label: string;
+    range: string;
+    color: string;
+  }[];
+  activeLayer: ClimateLayer;
+}
+
+
+function MapLegend({ title, items, activeLayer }: MapLegendProps) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: "16px",
+        bottom: "16px",
+        background: "rgba(255, 255, 255, 0.94)",
+        border: "1px solid #e5e7eb",
+        borderRadius: "14px",
+        padding: "12px",
+        minWidth: "190px",
+        boxShadow: "0 10px 30px rgba(15, 23, 42, 0.15)",
+        zIndex: 2,
+      }}
+    >
+      <p
+        style={{
+          margin: "0 0 8px",
+          color: "#111827",
+          fontSize: "13px",
+          fontWeight: 900,
+        }}
+      >
+        {title}
+      </p>
+
+      <div
+        style={{
+          display: "grid",
+          gap: "6px",
+        }}
+      >
+        {items.map((item) => (
+          <div
+            key={`${activeLayer}-${item.label}`}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "18px 1fr auto",
+              gap: "8px",
+              alignItems: "center",
+            }}
+          >
+            <span
+              style={{
+                width: "18px",
+                height: "12px",
+                borderRadius: activeLayer === "rainfall" ? "3px" : "999px",
+                background: item.color,
+                border: "1px solid rgba(17, 24, 39, 0.25)",
+              }}
+            />
+
+            <span
+              style={{
+                color: "#111827",
+                fontSize: "12px",
+                fontWeight: 800,
+              }}
+            >
+              {item.label}
+            </span>
+
+            <span
+              style={{
+                color: "#4b5563",
+                fontSize: "11px",
+                fontWeight: 700,
+              }}
+            >
+              {item.range}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
