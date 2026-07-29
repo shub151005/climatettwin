@@ -38,6 +38,8 @@ export function ClimateMap({
 }: ClimateMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
+  const popupRef = useRef<maplibregl.Popup | null>(null);
+
   const [isMapReady, setIsMapReady] = useState(false);
 
   const rainfallGeoJson = useMemo(() => {
@@ -226,10 +228,91 @@ export function ClimateMap({
         },
       });
 
+      map.on("mouseenter", "rainfall-field-fill", () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+
+      map.on("mouseleave", "rainfall-field-fill", () => {
+        map.getCanvas().style.cursor = "";
+      });
+
+      map.on("mouseenter", "temperature-field-circle", () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+
+      map.on("mouseleave", "temperature-field-circle", () => {
+        map.getCanvas().style.cursor = "";
+      });
+
+      map.on("click", "rainfall-field-fill", (event) => {
+        const feature = event.features?.[0];
+
+        if (!feature || !event.lngLat || !rainfallData) {
+          return;
+        }
+
+        const properties = feature.properties as {
+          rainfall_mm?: number;
+          latitude?: number;
+          longitude?: number;
+        };
+
+        const rainfallMm = Number(properties.rainfall_mm ?? 0);
+        const latitude = Number(properties.latitude ?? 0);
+        const longitude = Number(properties.longitude ?? 0);
+
+        showPopup(
+          map,
+          popupRef,
+          event.lngLat,
+          buildRainfallPopupHtml({
+            date: rainfallData.date,
+            rainfallMm,
+            latitude,
+            longitude,
+          })
+        );
+      });
+
+      map.on("click", "temperature-field-circle", (event) => {
+        const feature = event.features?.[0];
+
+        if (!feature || !event.lngLat || !temperatureData) {
+          return;
+        }
+
+        const properties = feature.properties as {
+          variable?: string;
+          temperature_c?: number;
+          latitude?: number;
+          longitude?: number;
+        };
+
+        const variable = String(properties.variable ?? temperatureData.variable);
+        const temperatureC = Number(properties.temperature_c ?? 0);
+        const latitude = Number(properties.latitude ?? 0);
+        const longitude = Number(properties.longitude ?? 0);
+
+        showPopup(
+          map,
+          popupRef,
+          event.lngLat,
+          buildTemperaturePopupHtml({
+            date: temperatureData.date,
+            variable,
+            temperatureC,
+            latitude,
+            longitude,
+          })
+        );
+      });
+
       setIsMapReady(true);
     });
 
     return () => {
+      popupRef.current?.remove();
+      popupRef.current = null;
       map.remove();
       mapRef.current = null;
       setIsMapReady(false);
@@ -266,6 +349,9 @@ export function ClimateMap({
     if (!map || !isMapReady) {
       return;
     }
+
+    popupRef.current?.remove();
+    popupRef.current = null;
 
     applyLayerVisibility(map, activeLayer);
 
@@ -317,7 +403,8 @@ export function ClimateMap({
             }}
           >
             Rainfall is rendered as 0.25° grid cells. Temperature is rendered as
-            coarse 1° grid-center markers to avoid misleading polygon spillover.
+            coarse 1° grid-center markers. Click any cell or marker to inspect
+            its value.
           </p>
         </div>
 
@@ -454,6 +541,89 @@ function buildTemperatureGeoJson(
       };
     }),
   };
+}
+
+
+function showPopup(
+  map: MapLibreMap,
+  popupRef: React.MutableRefObject<maplibregl.Popup | null>,
+  lngLat: maplibregl.LngLat,
+  html: string
+) {
+  popupRef.current?.remove();
+
+  popupRef.current = new maplibregl.Popup({
+    closeButton: true,
+    closeOnClick: true,
+    maxWidth: "280px",
+  })
+    .setLngLat(lngLat)
+    .setHTML(html)
+    .addTo(map);
+}
+
+
+function buildRainfallPopupHtml({
+  date,
+  rainfallMm,
+  latitude,
+  longitude,
+}: {
+  date: string;
+  rainfallMm: number;
+  latitude: number;
+  longitude: number;
+}) {
+  return `
+    <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+      <div style="font-size: 12px; font-weight: 800; color: #2563eb; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
+        Rainfall Cell
+      </div>
+
+      <div style="font-size: 16px; font-weight: 900; color: #111827; margin-bottom: 8px;">
+        ${rainfallMm.toFixed(2)} mm
+      </div>
+
+      <div style="font-size: 13px; color: #374151; line-height: 1.6;">
+        <strong>Date:</strong> ${date}<br />
+        <strong>Latitude:</strong> ${latitude.toFixed(2)}<br />
+        <strong>Longitude:</strong> ${longitude.toFixed(2)}
+      </div>
+    </div>
+  `;
+}
+
+
+function buildTemperaturePopupHtml({
+  date,
+  variable,
+  temperatureC,
+  latitude,
+  longitude,
+}: {
+  date: string;
+  variable: string;
+  temperatureC: number;
+  latitude: number;
+  longitude: number;
+}) {
+  return `
+    <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+      <div style="font-size: 12px; font-weight: 800; color: #b91c1c; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
+        Temperature Marker
+      </div>
+
+      <div style="font-size: 16px; font-weight: 900; color: #111827; margin-bottom: 8px;">
+        ${variable}: ${temperatureC.toFixed(2)} °C
+      </div>
+
+      <div style="font-size: 13px; color: #374151; line-height: 1.6;">
+        <strong>Date:</strong> ${date}<br />
+        <strong>Latitude:</strong> ${latitude.toFixed(2)}<br />
+        <strong>Longitude:</strong> ${longitude.toFixed(2)}
+      </div>
+    </div>
+  `;
 }
 
 
