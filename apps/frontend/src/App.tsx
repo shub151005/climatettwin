@@ -77,6 +77,9 @@ function App() {
     useState<ClimateLayer>("rainfall");
 
   const [selectedFieldDate, setSelectedFieldDate] = useState("2025-05-30");
+  const [selectedTemperatureDate, setSelectedTemperatureDate] =
+    useState("2025-07-24");
+
   const [sequenceStartDate, setSequenceStartDate] = useState("2025-05-24");
   const [sequenceEndDate, setSequenceEndDate] = useState("2025-06-07");
 
@@ -155,6 +158,7 @@ function App() {
         setFieldSequence(sequenceData.fields);
 
         setSelectedFieldDate(defaultFieldDate);
+        setSelectedTemperatureDate(temperatureSummaryData.peak_tmax_day);
         setSequenceStartDate(sequenceStart);
         setSequenceEndDate(sequenceEnd);
       } catch (caughtError) {
@@ -357,6 +361,7 @@ function App() {
 
       setSelectedFieldDate(dateValue);
       setRainfallField(fieldData);
+      setActiveClimateLayer("rainfall");
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -379,14 +384,38 @@ function App() {
 
       setIsTemperatureFieldLoading(true);
 
-      const temperatureDate =
-        temperatureSummary?.peak_tmax_day ??
-        temperatureMetadata?.end_date ??
-        "2025-07-24";
-
-      const fieldData = await getAssamTemperatureField(temperatureDate, layer);
+      const fieldData = await getAssamTemperatureField(
+        selectedTemperatureDate,
+        layer
+      );
 
       setTemperatureField(fieldData);
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Failed to load temperature field."
+      );
+    } finally {
+      setIsTemperatureFieldLoading(false);
+    }
+  }
+
+  async function handleLoadTemperatureField() {
+    const selectedLayer =
+      activeClimateLayer === "rainfall" ? "TMEAN" : activeClimateLayer;
+
+    try {
+      setError(null);
+      setIsTemperatureFieldLoading(true);
+
+      const fieldData = await getAssamTemperatureField(
+        selectedTemperatureDate,
+        selectedLayer
+      );
+
+      setTemperatureField(fieldData);
+      setActiveClimateLayer(selectedLayer);
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -418,6 +447,7 @@ function App() {
 
         setRainfallField(firstField);
         setSelectedFieldDate(firstField.date);
+        setActiveClimateLayer("rainfall");
       }
     } catch (caughtError) {
       setError(
@@ -463,6 +493,7 @@ function App() {
 
     setRainfallField(field);
     setSelectedFieldDate(field.date);
+    setActiveClimateLayer("rainfall");
   }
 
   function handlePreviousSequenceFrame() {
@@ -497,6 +528,7 @@ function App() {
         if (!currentField) {
           const firstField = fieldSequence[0];
           setSelectedFieldDate(firstField.date);
+          setActiveClimateLayer("rainfall");
           return firstField;
         }
 
@@ -511,6 +543,7 @@ function App() {
 
         const nextField = fieldSequence[nextIndex];
         setSelectedFieldDate(nextField.date);
+        setActiveClimateLayer("rainfall");
 
         return nextField;
       });
@@ -1174,6 +1207,34 @@ function App() {
               style={getLayerButtonStyle(activeClimateLayer === "TMIN")}
             >
               TMIN
+            </button>
+
+            <label style={labelStyle}>
+              Temperature date
+              <input
+                type="date"
+                value={selectedTemperatureDate}
+                min={temperatureMetadata?.start_date}
+                max={temperatureMetadata?.end_date}
+                onChange={(event) =>
+                  setSelectedTemperatureDate(event.target.value)
+                }
+                style={inputStyle}
+              />
+            </label>
+
+            <button
+              type="button"
+              onClick={handleLoadTemperatureField}
+              disabled={isTemperatureFieldLoading}
+              style={{
+                ...secondaryButtonStyle,
+                background: "#7f1d1d",
+                color: "#ffffff",
+                borderColor: "#7f1d1d",
+              }}
+            >
+              Load temperature
             </button>
 
             {isTemperatureFieldLoading && (

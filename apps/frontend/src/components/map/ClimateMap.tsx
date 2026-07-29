@@ -1,12 +1,7 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
-import type {
-  FeatureCollection,
-  Geometry,
-  Point,
-  Polygon,
-} from "geojson";
+import type { FeatureCollection, Geometry, Point, Polygon } from "geojson";
 
 import assamDistrictBoundaries from "../../data/geojson/assam-district-boundaries.json";
 import assamOuterBoundary from "../../data/geojson/assam-outer-boundary.json";
@@ -43,6 +38,7 @@ export function ClimateMap({
 }: ClimateMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
+  const [isMapReady, setIsMapReady] = useState(false);
 
   const rainfallGeoJson = useMemo(() => {
     return buildRainfallGeoJson(rainfallData);
@@ -143,9 +139,6 @@ export function ClimateMap({
         id: "rainfall-field-fill",
         type: "fill",
         source: "rainfall-field",
-        layout: {
-          visibility: activeLayer === "rainfall" ? "visible" : "none",
-        },
         paint: {
           "fill-color": [
             "case",
@@ -169,9 +162,6 @@ export function ClimateMap({
         id: "rainfall-field-outline",
         type: "line",
         source: "rainfall-field",
-        layout: {
-          visibility: activeLayer === "rainfall" ? "visible" : "none",
-        },
         paint: {
           "line-color": "rgba(255,255,255,0.35)",
           "line-width": 0.45,
@@ -182,9 +172,6 @@ export function ClimateMap({
         id: "temperature-field-circle",
         type: "circle",
         source: "temperature-field",
-        layout: {
-          visibility: activeLayer === "rainfall" ? "none" : "visible",
-        },
         paint: {
           "circle-radius": [
             "interpolate",
@@ -239,23 +226,20 @@ export function ClimateMap({
         },
       });
 
-      if (activeLayer === "rainfall") {
-        fitMapToPolygonGeoJson(map, rainfallGeoJson);
-      } else {
-        fitMapToPointGeoJson(map, temperatureGeoJson);
-      }
+      setIsMapReady(true);
     });
 
     return () => {
       map.remove();
       mapRef.current = null;
+      setIsMapReady(false);
     };
   }, []);
 
   useEffect(() => {
     const map = mapRef.current;
 
-    if (!map || !map.isStyleLoaded()) {
+    if (!map || !isMapReady) {
       return;
     }
 
@@ -274,50 +258,23 @@ export function ClimateMap({
     if (temperatureSource) {
       temperatureSource.setData(temperatureGeoJson);
     }
-  }, [rainfallGeoJson, temperatureGeoJson]);
+  }, [rainfallGeoJson, temperatureGeoJson, isMapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
 
-    if (!map || !map.isStyleLoaded()) {
+    if (!map || !isMapReady) {
       return;
     }
 
-    const rainfallVisibility =
-      activeLayer === "rainfall" ? "visible" : "none";
-    const temperatureVisibility =
-      activeLayer === "rainfall" ? "none" : "visible";
-
-    if (map.getLayer("rainfall-field-fill")) {
-      map.setLayoutProperty(
-        "rainfall-field-fill",
-        "visibility",
-        rainfallVisibility
-      );
-    }
-
-    if (map.getLayer("rainfall-field-outline")) {
-      map.setLayoutProperty(
-        "rainfall-field-outline",
-        "visibility",
-        rainfallVisibility
-      );
-    }
-
-    if (map.getLayer("temperature-field-circle")) {
-      map.setLayoutProperty(
-        "temperature-field-circle",
-        "visibility",
-        temperatureVisibility
-      );
-    }
+    applyLayerVisibility(map, activeLayer);
 
     if (activeLayer === "rainfall") {
       fitMapToPolygonGeoJson(map, rainfallGeoJson);
     } else {
       fitMapToPointGeoJson(map, temperatureGeoJson);
     }
-  }, [activeLayer, rainfallGeoJson, temperatureGeoJson]);
+  }, [activeLayer, rainfallGeoJson, temperatureGeoJson, isMapReady]);
 
   return (
     <section
@@ -394,6 +351,36 @@ export function ClimateMap({
       />
     </section>
   );
+}
+
+
+function applyLayerVisibility(map: MapLibreMap, activeLayer: ClimateLayer) {
+  const rainfallVisibility = activeLayer === "rainfall" ? "visible" : "none";
+  const temperatureVisibility = activeLayer === "rainfall" ? "none" : "visible";
+
+  if (map.getLayer("rainfall-field-fill")) {
+    map.setLayoutProperty(
+      "rainfall-field-fill",
+      "visibility",
+      rainfallVisibility
+    );
+  }
+
+  if (map.getLayer("rainfall-field-outline")) {
+    map.setLayoutProperty(
+      "rainfall-field-outline",
+      "visibility",
+      rainfallVisibility
+    );
+  }
+
+  if (map.getLayer("temperature-field-circle")) {
+    map.setLayoutProperty(
+      "temperature-field-circle",
+      "visibility",
+      temperatureVisibility
+    );
+  }
 }
 
 
