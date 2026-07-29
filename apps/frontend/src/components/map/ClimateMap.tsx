@@ -85,34 +85,6 @@ export function ClimateMap({
     return buildTemperatureGeoJson(temperatureData);
   }, [temperatureData]);
 
-  const activeStats = useMemo(() => {
-    if (activeLayer === "rainfall" && rainfallData) {
-      return {
-        title: "Rainfall",
-        date: rainfallData.date,
-        value: `${rainfallData.rainfall_mean_mm.toFixed(2)} mm mean`,
-        range: `${rainfallData.rainfall_min_mm.toFixed(
-          2
-        )}–${rainfallData.rainfall_max_mm.toFixed(2)} mm`,
-        cells: rainfallData.cell_count,
-      };
-    }
-
-    if (activeLayer !== "rainfall" && temperatureData) {
-      return {
-        title: temperatureData.variable,
-        date: temperatureData.date,
-        value: `${temperatureData.temperature_mean_c.toFixed(2)} °C mean`,
-        range: `${temperatureData.temperature_min_c.toFixed(
-          2
-        )}–${temperatureData.temperature_max_c.toFixed(2)} °C`,
-        cells: temperatureData.cell_count,
-      };
-    }
-
-    return null;
-  }, [activeLayer, rainfallData, temperatureData]);
-
   const legendItems =
     activeLayer === "rainfall" ? rainfallLegendItems : temperatureLegendItems;
 
@@ -146,13 +118,13 @@ export function ClimateMap({
             type: "raster",
             source: "cartoDark",
             paint: {
-              "raster-opacity": 0.92,
+              "raster-opacity": 0.95,
             },
           },
         ],
       },
-      center: [93.5, 26.2],
-      zoom: 6.4,
+      center: [93.4, 26.25],
+      zoom: 6.75,
       attributionControl: {
         compact: true,
       },
@@ -213,28 +185,6 @@ export function ClimateMap({
           "circle-color": "#ffffff",
           "circle-opacity": 0.01,
           "circle-stroke-opacity": 0,
-        },
-      });
-
-      map.addLayer({
-        id: "assam-district-boundary-line",
-        type: "line",
-        source: "assam-district-boundaries",
-        paint: {
-          "line-color": "rgba(255,255,255,0.32)",
-          "line-width": 0.8,
-          "line-opacity": 0.75,
-        },
-      });
-
-      map.addLayer({
-        id: "assam-outer-boundary-line",
-        type: "line",
-        source: "assam-outer-boundary",
-        paint: {
-          "line-color": "#f9fafb",
-          "line-width": 2.8,
-          "line-opacity": 0.95,
         },
       });
 
@@ -322,6 +272,11 @@ export function ClimateMap({
       });
 
       setIsMapReady(true);
+
+      window.setTimeout(() => {
+        map.resize();
+        fitMapToAssam(map);
+      }, 150);
     });
 
     return () => {
@@ -370,131 +325,46 @@ export function ClimateMap({
 
     applyClickLayerVisibility(map, activeLayer);
 
-    if (activeLayer === "rainfall") {
-      fitMapToPolygonGeoJson(map, rainfallGeoJson);
-    } else {
-      fitMapToPointGeoJson(map, temperatureGeoJson);
-    }
+    window.setTimeout(() => {
+      map.resize();
+      fitMapToAssam(map);
+    }, 80);
   }, [activeLayer, rainfallGeoJson, temperatureGeoJson, isMapReady]);
 
   return (
-    <section
+    <div
       style={{
-        marginTop: "24px",
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
         background: "#020617",
-        border: "1px solid rgba(148, 163, 184, 0.25)",
-        borderRadius: "18px",
-        overflow: "hidden",
-        boxShadow: "0 24px 70px rgba(2, 6, 23, 0.45)",
       }}
     >
       <div
+        ref={mapContainerRef}
         style={{
-          padding: "16px 18px",
-          borderBottom: "1px solid rgba(148, 163, 184, 0.22)",
-          display: "flex",
-          justifyContent: "space-between",
-          gap: "16px",
-          alignItems: "center",
-          background:
-            "linear-gradient(135deg, rgba(15,23,42,0.98), rgba(30,41,59,0.94))",
-        }}
-      >
-        <div>
-          <p
-            style={{
-              margin: "0 0 6px",
-              color: "#38bdf8",
-              fontSize: "12px",
-              fontWeight: 900,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-            }}
-          >
-            Smooth Climate Field
-          </p>
-
-          <h2
-            style={{
-              margin: 0,
-              color: "#f9fafb",
-              fontSize: "21px",
-              fontWeight: 900,
-            }}
-          >
-            Climate Spatial Layer — Assam
-          </h2>
-
-          <p
-            style={{
-              margin: "7px 0 0",
-              color: "#cbd5e1",
-              fontSize: "14px",
-              lineHeight: 1.5,
-              maxWidth: "820px",
-            }}
-          >
-            Raw IMD grid values are rendered as smooth atmospheric patches over
-            the Assam boundary. Click any cell/marker target to inspect exact
-            source-grid values.
-          </p>
-        </div>
-
-        {activeStats && (
-          <div
-            style={{
-              textAlign: "right",
-              color: "#f9fafb",
-              fontSize: "13px",
-              fontWeight: 800,
-              lineHeight: 1.6,
-              minWidth: "180px",
-            }}
-          >
-            <div>
-              {activeStats.title} · {activeStats.date}
-            </div>
-            <div>{activeStats.value}</div>
-            <div style={{ color: "#cbd5e1" }}>
-              Range {activeStats.range} · {activeStats.cells} cells
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div
-        style={{
-          position: "relative",
+          position: "absolute",
+          inset: 0,
           width: "100%",
-          height: "620px",
-          background: "#020617",
+          height: "100%",
         }}
-      >
-        <div
-          ref={mapContainerRef}
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-          }}
-        />
+      />
 
-        <SmoothClimateOverlay
-          map={mapInstance}
-          isMapReady={isMapReady}
-          activeLayer={activeLayer}
-          rainfallData={rainfallData}
-          temperatureData={temperatureData}
-        />
+      <SmoothClimateOverlay
+        map={mapInstance}
+        isMapReady={isMapReady}
+        activeLayer={activeLayer}
+        rainfallData={rainfallData}
+        temperatureData={temperatureData}
+      />
 
-        <MapLegend
-          title={legendTitle}
-          items={legendItems}
-          activeLayer={activeLayer}
-        />
-      </div>
-    </section>
+      <MapLegend
+        title={legendTitle}
+        items={legendItems}
+        activeLayer={activeLayer}
+      />
+    </div>
   );
 }
 
@@ -515,24 +385,24 @@ function MapLegend({ title, items, activeLayer }: MapLegendProps) {
     <div
       style={{
         position: "absolute",
-        left: "16px",
-        bottom: "16px",
-        background: "rgba(15, 23, 42, 0.88)",
+        left: "18px",
+        bottom: "96px",
+        background: "rgba(15, 23, 42, 0.82)",
         border: "1px solid rgba(148, 163, 184, 0.35)",
-        borderRadius: "14px",
-        padding: "12px",
-        minWidth: "205px",
+        borderRadius: "16px",
+        padding: "13px",
+        minWidth: "210px",
         boxShadow: "0 18px 40px rgba(2, 6, 23, 0.45)",
         backdropFilter: "blur(14px)",
-        zIndex: 3,
+        zIndex: 6,
       }}
     >
       <p
         style={{
-          margin: "0 0 8px",
+          margin: "0 0 9px",
           color: "#f9fafb",
           fontSize: "13px",
-          fontWeight: 900,
+          fontWeight: 950,
         }}
       >
         {title}
@@ -541,7 +411,7 @@ function MapLegend({ title, items, activeLayer }: MapLegendProps) {
       <div
         style={{
           display: "grid",
-          gap: "6px",
+          gap: "7px",
         }}
       >
         {items.map((item) => (
@@ -568,7 +438,7 @@ function MapLegend({ title, items, activeLayer }: MapLegendProps) {
               style={{
                 color: "#e5e7eb",
                 fontSize: "12px",
-                fontWeight: 800,
+                fontWeight: 850,
               }}
             >
               {item.label}
@@ -578,7 +448,7 @@ function MapLegend({ title, items, activeLayer }: MapLegendProps) {
               style={{
                 color: "#cbd5e1",
                 fontSize: "11px",
-                fontWeight: 700,
+                fontWeight: 750,
               }}
             >
               {item.range}
@@ -770,50 +640,35 @@ function buildTemperaturePopupHtml({
 }
 
 
-function fitMapToPolygonGeoJson(
-  map: MapLibreMap,
-  geoJson: FeatureCollection<Polygon>
-) {
-  if (geoJson.features.length === 0) {
-    return;
+function fitMapToAssam(map: MapLibreMap) {
+  const coordinates: { longitude: number; latitude: number }[] = [];
+
+  for (const feature of assamOuterBoundaryGeoJson.features) {
+    const geometry = feature.geometry;
+
+    if (!geometry) {
+      continue;
+    }
+
+    if (geometry.type === "Polygon") {
+      for (const ring of geometry.coordinates) {
+        for (const [longitude, latitude] of ring) {
+          coordinates.push({ longitude, latitude });
+        }
+      }
+    }
+
+    if (geometry.type === "MultiPolygon") {
+      for (const polygon of geometry.coordinates) {
+        for (const ring of polygon) {
+          for (const [longitude, latitude] of ring) {
+            coordinates.push({ longitude, latitude });
+          }
+        }
+      }
+    }
   }
 
-  const coordinates = geoJson.features.flatMap((feature) =>
-    feature.geometry.coordinates[0].map(([longitude, latitude]) => ({
-      longitude,
-      latitude,
-    }))
-  );
-
-  fitMapToCoordinates(map, coordinates);
-}
-
-
-function fitMapToPointGeoJson(
-  map: MapLibreMap,
-  geoJson: FeatureCollection<Point>
-) {
-  if (geoJson.features.length === 0) {
-    return;
-  }
-
-  const coordinates = geoJson.features.map((feature) => {
-    const [longitude, latitude] = feature.geometry.coordinates;
-
-    return {
-      longitude,
-      latitude,
-    };
-  });
-
-  fitMapToCoordinates(map, coordinates);
-}
-
-
-function fitMapToCoordinates(
-  map: MapLibreMap,
-  coordinates: { longitude: number; latitude: number }[]
-) {
   if (coordinates.length === 0) {
     return;
   }
@@ -832,8 +687,13 @@ function fitMapToCoordinates(
   );
 
   map.fitBounds(bounds, {
-    padding: 72,
-    duration: 500,
-    maxZoom: 7.3,
+    padding: {
+      top: 92,
+      right: 280,
+      bottom: 128,
+      left: 360,
+    },
+    duration: 450,
+    maxZoom: 7.25,
   });
 }
