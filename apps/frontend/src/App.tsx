@@ -42,29 +42,37 @@ function App() {
   const [monthlyRainfall, setMonthlyRainfall] = useState<
     MonthlyRainfallSummary[]
   >([]);
+
   const [rainfallAnomalies, setRainfallAnomalies] = useState<
     DailyRainfallAnomaly[]
   >([]);
+
   const [rainfallAnomalySummary, setRainfallAnomalySummary] =
     useState<RainfallAnomalySummaryResponse | null>(null);
+
   const [seasonalRainfallSummary, setSeasonalRainfallSummary] = useState<
     SeasonalRainfallSummary[]
   >([]);
+
   const [rainfallMetadata, setRainfallMetadata] =
     useState<RainfallMetadataResponse | null>(null);
 
   const [temperatureMetadata, setTemperatureMetadata] =
     useState<TemperatureMetadataResponse | null>(null);
+
   const [temperatureSummary, setTemperatureSummary] =
     useState<TemperatureSummaryResponse | null>(null);
+
   const [monthlyTemperature, setMonthlyTemperature] = useState<
     MonthlyTemperatureSummary[]
   >([]);
 
   const [rainfallField, setRainfallField] =
     useState<RainfallFieldResponse | null>(null);
+
   const [temperatureField, setTemperatureField] =
     useState<TemperatureFieldResponse | null>(null);
+
   const [fieldSequence, setFieldSequence] = useState<RainfallFieldResponse[]>(
     []
   );
@@ -80,9 +88,12 @@ function App() {
   const [sequenceEndDate, setSequenceEndDate] = useState("2025-06-07");
 
   const [isFieldLoading, setIsFieldLoading] = useState(false);
+
   const [isTemperatureFieldLoading, setIsTemperatureFieldLoading] =
     useState(false);
+
   const [isSequenceLoading, setIsSequenceLoading] = useState(false);
+
   const [isPlayingFieldAnimation, setIsPlayingFieldAnimation] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
@@ -218,18 +229,6 @@ function App() {
       ) ?? null
     );
   }, [rainfallAnomalies, rainfallField]);
-
-  const peakRainfallAnomaly = useMemo(() => {
-    if (!rainfallStats.maxRainfallDay) {
-      return null;
-    }
-
-    return (
-      rainfallAnomalies.find(
-        (anomaly) => anomaly.date === rainfallStats.maxRainfallDay?.date
-      ) ?? null
-    );
-  }, [rainfallAnomalies, rainfallStats.maxRainfallDay]);
 
   const dominantSeason = useMemo(() => {
     if (seasonalRainfallSummary.length === 0) {
@@ -984,13 +983,6 @@ function clampDateStringToRange(
   return dateValue;
 }
 
-function formatRainfallClass(value: string): string {
-  return value
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
 function formatSeason(value: string): string {
   return value
     .split("_")
@@ -1188,11 +1180,9 @@ const chartStackStyle = {
 } as const;
 
 const chartShellStyle = {
-  background: "#ffffff",
+  background: "transparent",
   borderRadius: "22px",
-  overflow: "hidden",
-  border: "1px solid rgba(148, 163, 184, 0.18)",
-  boxShadow: "0 22px 60px rgba(2, 6, 23, 0.24)",
+  overflow: "visible",
 } as const;
 
 const systemGridStyle = {
