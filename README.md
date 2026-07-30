@@ -1,23 +1,10 @@
-Create / replace this file:
-
-```text
-D:\hackaton,projects\climatetwin\README.md
-```
-
-with this full content:
-
-````md
 # ClimateTwin India — V1 Assam Climate Intelligence Prototype
 
 ClimateTwin India is an AI-ready geospatial climate intelligence prototype built for the ISRO hackathon problem statement: **AI-Powered Digital Twin of India’s Climate using India’s National Data**.
 
 The current V1 implementation focuses on **Assam** as a regional proof of concept. It uses real gridded rainfall and temperature datasets, processes them into boundary-clipped regional climate layers, exposes backend APIs, and visualizes the results through a map-first command center interface.
 
----
-
-## Project Codename
-
-**Project VARSHA**
+Project codename: **Project VARSHA**
 
 ---
 
@@ -30,13 +17,13 @@ Observe     → View real rainfall and temperature spatial layers
 Understand → Analyze anomalies, seasonality, heat signals, and climate state
 Animate    → Play rainfall field sequences over time
 Inspect    → Click map cells/markers to inspect source-grid values
-````
+```
 
 V1 is not a weather API wrapper. It is a real data engineering and geospatial analytics pipeline.
 
 ---
 
-## Current Region
+## Current Region and Dataset
 
 ```text
 Region: Assam, India
@@ -50,7 +37,7 @@ Boundary: Assam GeoJSON boundary
 
 ## Tech Stack
 
-### Frontend
+Frontend:
 
 ```text
 React
@@ -62,7 +49,7 @@ Canvas overlay rendering
 CSS-in-TS component styling
 ```
 
-### Backend
+Backend:
 
 ```text
 Python
@@ -75,7 +62,7 @@ Shapely
 NetCDF processing
 ```
 
-### Data Processing
+Data processing:
 
 ```text
 IMD rainfall NetCDF processing
@@ -92,7 +79,7 @@ Temperature intelligence summaries
 
 ## Main Features
 
-### 1. Climate Command Center
+### Climate Command Center
 
 The frontend is built as a map-first command center.
 
@@ -110,9 +97,7 @@ District boundaries
 Source-grid popups
 ```
 
----
-
-### 2. Rainfall Intelligence
+### Rainfall Intelligence
 
 Rainfall V1 includes:
 
@@ -138,9 +123,7 @@ Peak grid-cell rainfall: 176.43 mm
 Dominant rainfall season: Monsoon
 ```
 
----
-
-### 3. Temperature Intelligence
+### Temperature Intelligence
 
 Temperature V1 includes:
 
@@ -168,9 +151,7 @@ Peak heat day: 2025-07-24
 Coldest night: 2025-12-12
 ```
 
----
-
-### 4. Spatial Climate Layers
+### Spatial Climate Layers
 
 The interactive map supports:
 
@@ -274,7 +255,7 @@ http://localhost:5173
 
 ## Production Build Check
 
-From frontend folder:
+From the frontend folder:
 
 ```powershell
 cd D:\hackaton,projects\climatetwin\apps\frontend
@@ -297,7 +278,7 @@ http://localhost:4173
 
 ## Backend Test
 
-From backend folder:
+From the backend folder:
 
 ```powershell
 cd D:\hackaton,projects\climatetwin\apps\backend
@@ -315,13 +296,13 @@ Expected:
 
 ## Important API Endpoints
 
-### Health
+Health:
 
 ```text
 GET /api/v1/health
 ```
 
-### Rainfall
+Rainfall:
 
 ```text
 GET /api/v1/rainfall/assam/metadata
@@ -334,7 +315,7 @@ GET /api/v1/rainfall/assam/field?selected_date=2025-05-31
 GET /api/v1/rainfall/assam/field-sequence?start_date=2025-05-24&end_date=2025-06-07
 ```
 
-### Temperature
+Temperature:
 
 ```text
 GET /api/v1/temperature/assam/metadata
@@ -364,7 +345,7 @@ TMIN
 
 ## Data Pipeline Scripts
 
-Run scripts from project root using backend Python:
+Run scripts from the project root using backend Python:
 
 ```powershell
 cd D:\hackaton,projects\climatetwin
@@ -390,7 +371,7 @@ Summarize temperature
 
 ## Current Processed Data Outputs
 
-### Rainfall
+Rainfall:
 
 ```text
 data/processed/imd/rainfall/assam_rainfall_2025_clipped.nc
@@ -399,7 +380,7 @@ data/derived/assam/assam_rainfall_monthly_summary_2025_clipped.csv
 data/derived/assam/assam_rainfall_daily_anomalies_2025_clipped.csv
 ```
 
-### Temperature
+Temperature:
 
 ```text
 data/processed/imd/temperature/india_temperature_2025.nc
@@ -409,7 +390,7 @@ data/derived/assam/assam_temperature_daily_summary_2025_clipped.csv
 data/derived/assam/assam_temperature_monthly_summary_2025_clipped.csv
 ```
 
-### Boundary
+Boundary:
 
 ```text
 data/processed/boundaries/assam_district_boundaries.geojson
@@ -421,8 +402,6 @@ apps/frontend/src/data/geojson/assam-outer-boundary.json
 ---
 
 ## Manual Demo Flow
-
-For a demo, use this flow:
 
 ### 1. Start backend
 
@@ -557,4 +536,3 @@ Raw climate data
 ```
 
 It is a regional but serious foundation for a larger climate digital twin platform.
-
