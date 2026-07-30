@@ -563,6 +563,7 @@ function App() {
         color: "#f9fafb",
         padding: "12px",
         overflowX: "hidden",
+        boxSizing: "border-box",
       }}
     >
       <section
