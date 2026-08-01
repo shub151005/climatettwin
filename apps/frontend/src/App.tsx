@@ -4,6 +4,7 @@ import { MonthlyRainfallBarChart } from "./components/charts/MonthlyRainfallBarC
 import { MonthlyTemperatureChart } from "./components/charts/MonthlyTemperatureChart";
 import { RainfallLineChart } from "./components/charts/RainfallLineChart";
 import { ClimateCommandCenter } from "./components/layout/ClimateCommandCenter";
+import SimulationControlPanel from "./components/simulation/SimulationControlPanel";
 
 import {
   getAssamDailyRainfallAnomalies,
@@ -19,6 +20,7 @@ import {
   getAssamTemperatureMetadata,
   getAssamTemperatureSummary,
   getHealthStatus,
+  runAssamRainfallScenario,
   type DailyRainfallAnomaly,
   type DailyRainfallSummary,
   type HealthResponse,
@@ -27,6 +29,8 @@ import {
   type RainfallAnomalySummaryResponse,
   type RainfallFieldResponse,
   type RainfallMetadataResponse,
+  type RainfallScenarioResponse,
+  type ScenarioComparisonMode,
   type SeasonalRainfallSummary,
   type TemperatureFieldResponse,
   type TemperatureMetadataResponse,
@@ -97,6 +101,15 @@ function App() {
   const [isPlayingFieldAnimation, setIsPlayingFieldAnimation] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
+
+  const [simulationDate, setSimulationDate] = useState("2025-05-31");
+  const [rainfallChangePercent, setRainfallChangePercent] = useState(30);
+  const [simulationComparisonMode, setSimulationComparisonMode] =
+    useState<ScenarioComparisonMode>("original");
+  const [rainfallScenarioResult, setRainfallScenarioResult] =
+    useState<RainfallScenarioResponse | null>(null);
+  const [isSimulationLoading, setIsSimulationLoading] = useState(false);
+  const [simulationError, setSimulationError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadInitialData() {
@@ -173,6 +186,7 @@ function App() {
         setFieldSequence(sequenceData.fields);
 
         setSelectedFieldDate(defaultRainfallDate);
+        setSimulationDate(defaultRainfallDate);
         setSelectedTemperatureDate(defaultTemperatureDate);
         setSequenceStartDate(sequenceStart);
         setSequenceEndDate(sequenceEnd);
@@ -551,6 +565,39 @@ function App() {
     };
   }, [isPlayingFieldAnimation, fieldSequence]);
 
+  async function handleRunRainfallSimulation() {
+    try {
+      setSimulationError(null);
+      setIsSimulationLoading(true);
+      setIsPlayingFieldAnimation(false);
+
+      const result = await runAssamRainfallScenario({
+        selected_date: simulationDate,
+        rainfall_change_percent: rainfallChangePercent,
+      });
+
+      setRainfallScenarioResult(result);
+      setSimulationComparisonMode("simulated");
+      setActiveClimateLayer("rainfall");
+    } catch (caughtError) {
+      setSimulationError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Failed to run rainfall scenario."
+      );
+    } finally {
+      setIsSimulationLoading(false);
+    }
+  }
+
+  function handleResetRainfallSimulation() {
+    setRainfallScenarioResult(null);
+    setSimulationError(null);
+    setSimulationComparisonMode("original");
+    setRainfallChangePercent(30);
+    setSimulationDate(selectedFieldDate);
+  }
+
   const currentSequenceIndex = getCurrentSequenceIndex();
 
   return (
@@ -573,6 +620,7 @@ function App() {
           margin: 0,
         }}
       >
+        <div style={commandCenterWrapperStyle}>
         <ClimateCommandCenter
           activeClimateLayer={activeClimateLayer}
           rainfallField={rainfallField}
@@ -604,6 +652,23 @@ function App() {
           onToggleRainfallAnimation={handleToggleRainfallAnimation}
           onSingleRainfallDateChange={handleFieldDateChange}
         />
+
+          <div style={simulationPanelPlacementStyle}>
+            <SimulationControlPanel
+              selectedDate={simulationDate}
+              rainfallChangePercent={rainfallChangePercent}
+              comparisonMode={simulationComparisonMode}
+              result={rainfallScenarioResult}
+              isLoading={isSimulationLoading}
+              error={simulationError}
+              onDateChange={setSimulationDate}
+              onRainfallChange={setRainfallChangePercent}
+              onComparisonModeChange={setSimulationComparisonMode}
+              onRunSimulation={handleRunRainfallSimulation}
+              onResetSimulation={handleResetRainfallSimulation}
+            />
+          </div>
+        </div>
 
         {error && <section style={errorStyle}>{error}</section>}
 
@@ -990,6 +1055,19 @@ function formatSeason(value: string): string {
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 }
+
+const commandCenterWrapperStyle = {
+  position: "relative",
+  width: "100%",
+} as const;
+
+const simulationPanelPlacementStyle = {
+  position: "absolute",
+  top: "112px",
+  right: "292px",
+  zIndex: 30,
+  pointerEvents: "auto",
+} as const;
 
 const errorStyle = {
   marginBottom: "24px",

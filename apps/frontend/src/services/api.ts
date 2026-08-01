@@ -1,35 +1,83 @@
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ??
+  "http://127.0.0.1:8000";
 
+async function requestJson<T>(
+  endpoint: string,
+  options?: RequestInit,
+): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      Accept: "application/json",
+      ...(options?.body
+        ? {
+            "Content-Type": "application/json",
+          }
+        : {}),
+      ...options?.headers,
+    },
+  });
 
-export interface HealthResponse {
-  status: "healthy";
-  application: string;
-  version: string;
-  environment: string;
+  if (!response.ok) {
+    let message = `Request failed with status ${response.status}.`;
+
+    try {
+      const errorBody = (await response.json()) as {
+        detail?: string;
+        message?: string;
+      };
+
+      message =
+        errorBody.detail ??
+        errorBody.message ??
+        message;
+    } catch {
+      // Preserve the fallback message for non-JSON errors.
+    }
+
+    throw new Error(message);
+  }
+
+  return (await response.json()) as T;
 }
 
+/* =========================================================
+   Health
+   ========================================================= */
+
+export interface HealthResponse {
+  status: string;
+  application: string;
+  version: string;
+  environment?: string;
+}
+
+export async function getHealthStatus(): Promise<HealthResponse> {
+  return requestJson<HealthResponse>("/api/v1/health");
+}
+
+/* =========================================================
+   Rainfall types
+   ========================================================= */
 
 export interface DailyRainfallSummary {
   date: string;
   rainfall_mean_mm: number;
-  rainfall_max_mm: number;
   rainfall_min_mm: number;
-  valid_grid_cell_count: number;
-  month: number;
-  day_of_year: number;
+  rainfall_max_mm: number;
+  valid_grid_cells: number;
 }
-
 
 export interface MonthlyRainfallSummary {
   month: number;
-  rainfall_mean_of_daily_mean_mm: number;
+  month_name: string;
   rainfall_total_mean_mm: number;
+  rainfall_mean_mm: number;
   rainfall_max_mm: number;
-  valid_grid_cell_count_mean: number;
   rainy_days: number;
   heavy_rain_days: number;
 }
-
 
 export interface RainfallFieldCell {
   latitude: number;
@@ -37,11 +85,9 @@ export interface RainfallFieldCell {
   rainfall_mm: number;
 }
 
-
 export interface RainfallFieldResponse {
   region: string;
   date: string;
-  variable: string;
   unit: string;
   cell_count: number;
   rainfall_min_mm: number;
@@ -50,17 +96,13 @@ export interface RainfallFieldResponse {
   cells: RainfallFieldCell[];
 }
 
-
 export interface RainfallFieldSequenceResponse {
   region: string;
   start_date: string;
   end_date: string;
-  variable: string;
-  unit: string;
-  day_count: number;
+  frame_count: number;
   fields: RainfallFieldResponse[];
 }
-
 
 export interface RainfallMetadataResponse {
   region: string;
@@ -79,17 +121,12 @@ export interface RainfallMetadataResponse {
 
 export interface DailyRainfallAnomaly {
   date: string;
-  month: number;
-  day_of_year: number;
-  season: string;
   rainfall_mean_mm: number;
-  rainfall_max_mm: number;
-  rainfall_min_mm: number;
-  valid_grid_cell_count: number;
   rainfall_anomaly_from_annual_mean_mm: number;
   rainfall_z_score: number;
   rainfall_percentile: number;
   rainfall_intensity_class: string;
+  season: string;
   is_dry_day: boolean;
   is_wet_day: boolean;
   is_extreme_day: boolean;
@@ -97,19 +134,21 @@ export interface DailyRainfallAnomaly {
 
 export interface RainfallAnomalySummaryResponse {
   region: string;
-  baseline: string;
   annual_mean_rainfall_mm: number;
-  annual_std_rainfall_mm: number;
+  annual_rainfall_std_mm: number;
   dry_days: number;
   wet_days: number;
   extreme_days: number;
+
   peak_day: string;
   peak_day_rainfall_mean_mm: number;
   peak_day_rainfall_max_mm: number;
   peak_day_anomaly_mm: number;
   peak_day_percentile: number;
-  peak_day_intensity_class: string;
+  peak_day_rainfall_intensity_class: string;
   peak_day_season: string;
+
+  baseline_description?: string;
 }
 
 export interface SeasonalRainfallSummary {
@@ -124,59 +163,91 @@ export interface SeasonalRainfallSummary {
   season_share_of_annual_rainfall_percent: number;
 }
 
-export interface DailyTemperatureSummary {
-  date: string;
-  month: number;
-  day_of_year: number;
+/* =========================================================
+   Rainfall API
+   ========================================================= */
 
-  tmin_mean_c: number;
-  tmin_min_c: number;
-  tmin_max_c: number;
-
-  tmax_mean_c: number;
-  tmax_min_c: number;
-  tmax_max_c: number;
-
-  tmean_mean_c: number;
-  tmean_min_c: number;
-  tmean_max_c: number;
-
-  dtr_mean_c: number;
-  dtr_min_c: number;
-  dtr_max_c: number;
-
-  valid_grid_cell_count: number;
+export async function getAssamRainfallMetadata():
+  Promise<RainfallMetadataResponse> {
+  return requestJson<RainfallMetadataResponse>(
+    "/api/v1/rainfall/assam/metadata",
+  );
 }
 
-export interface MonthlyTemperatureSummary {
-  month: number;
-
-  tmin_mean_c: number;
-  tmin_min_c: number;
-  tmin_max_c: number;
-
-  tmax_mean_c: number;
-  tmax_min_c: number;
-  tmax_max_c: number;
-
-  tmean_mean_c: number;
-  tmean_min_c: number;
-  tmean_max_c: number;
-
-  dtr_mean_c: number;
-  dtr_min_c: number;
-  dtr_max_c: number;
-
-  valid_grid_cell_count_mean: number;
-
-  hot_days: number;
-  warm_nights: number;
-  cool_days: number;
+export async function getAssamDailyRainfallSummary():
+  Promise<DailyRainfallSummary[]> {
+  return requestJson<DailyRainfallSummary[]>(
+    "/api/v1/rainfall/assam/daily-summary",
+  );
 }
+
+export async function getAssamMonthlyRainfallSummary():
+  Promise<MonthlyRainfallSummary[]> {
+  return requestJson<MonthlyRainfallSummary[]>(
+    "/api/v1/rainfall/assam/monthly-summary",
+  );
+}
+
+export async function getAssamDailyRainfallAnomalies():
+  Promise<DailyRainfallAnomaly[]> {
+  return requestJson<DailyRainfallAnomaly[]>(
+    "/api/v1/rainfall/assam/daily-anomalies",
+  );
+}
+
+export async function getAssamRainfallAnomalySummary():
+  Promise<RainfallAnomalySummaryResponse> {
+  return requestJson<RainfallAnomalySummaryResponse>(
+    "/api/v1/rainfall/assam/anomaly-summary",
+  );
+}
+
+export async function getAssamSeasonalRainfallSummary():
+  Promise<SeasonalRainfallSummary[]> {
+  return requestJson<SeasonalRainfallSummary[]>(
+    "/api/v1/rainfall/assam/seasonal-summary",
+  );
+}
+
+export async function getAssamRainfallField(
+  selectedDate: string,
+): Promise<RainfallFieldResponse> {
+  const params = new URLSearchParams({
+    selected_date: selectedDate,
+  });
+
+  return requestJson<RainfallFieldResponse>(
+    `/api/v1/rainfall/assam/field?${params.toString()}`,
+  );
+}
+
+export async function getAssamRainfallFieldSequence(
+  startDate: string,
+  endDate: string,
+): Promise<RainfallFieldSequenceResponse> {
+  const params = new URLSearchParams({
+    start_date: startDate,
+    end_date: endDate,
+  });
+
+  return requestJson<RainfallFieldSequenceResponse>(
+    `/api/v1/rainfall/assam/field-sequence?${params.toString()}`,
+  );
+}
+
+/* =========================================================
+   Temperature types
+   ========================================================= */
+
+export type TemperatureVariable =
+  | "TMIN"
+  | "TMAX"
+  | "TMEAN"
+  | "DTR";
 
 export interface TemperatureMetadataResponse {
   region: string;
-  variables: string[];
+  variables: TemperatureVariable[];
   unit: string;
   start_date: string;
   end_date: string;
@@ -195,19 +266,27 @@ export interface TemperatureSummaryResponse {
   annual_tmax_mean_c: number;
   annual_tmean_mean_c: number;
   annual_dtr_mean_c: number;
-
   hot_days: number;
   warm_nights: number;
   cool_days: number;
-
   peak_tmax_day: string;
   peak_tmax_mean_c: number;
-
   coldest_tmin_day: string;
   coldest_tmin_mean_c: number;
-
   warmest_night_day: string;
   warmest_night_tmin_c: number;
+}
+
+export interface MonthlyTemperatureSummary {
+  month: number;
+  month_name: string;
+  tmin_mean_c: number;
+  tmax_mean_c: number;
+  tmean_mean_c: number;
+  dtr_mean_c: number;
+  hot_days: number;
+  warm_nights: number;
+  cool_days: number;
 }
 
 export interface TemperatureFieldCell {
@@ -219,7 +298,7 @@ export interface TemperatureFieldCell {
 export interface TemperatureFieldResponse {
   region: string;
   date: string;
-  variable: string;
+  variable: TemperatureVariable;
   unit: string;
   cell_count: number;
   temperature_min_c: number;
@@ -228,140 +307,130 @@ export interface TemperatureFieldResponse {
   cells: TemperatureFieldCell[];
 }
 
-async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetch(url);
+/* =========================================================
+   Temperature API
+   ========================================================= */
 
-  if (!response.ok) {
-    throw new Error(
-      `Request failed with status ${response.status}: ${url}`
-    );
-  }
-
-  return response.json() as Promise<T>;
-}
-
-
-export async function getHealthStatus(): Promise<HealthResponse> {
-  return fetchJson<HealthResponse>(`${API_BASE_URL}/api/v1/health`);
-}
-
-
-export async function getAssamRainfallMetadata(): Promise<RainfallMetadataResponse> {
-  return fetchJson<RainfallMetadataResponse>(
-    `${API_BASE_URL}/api/v1/rainfall/assam/metadata`
+export async function getAssamTemperatureMetadata():
+  Promise<TemperatureMetadataResponse> {
+  return requestJson<TemperatureMetadataResponse>(
+    "/api/v1/temperature/assam/metadata",
   );
 }
 
-
-export async function getAssamDailyRainfallSummary(): Promise<
-  DailyRainfallSummary[]
-> {
-  return fetchJson<DailyRainfallSummary[]>(
-    `${API_BASE_URL}/api/v1/rainfall/assam/daily-summary`
+export async function getAssamTemperatureSummary():
+  Promise<TemperatureSummaryResponse> {
+  return requestJson<TemperatureSummaryResponse>(
+    "/api/v1/temperature/assam/summary",
   );
 }
 
-
-export async function getAssamMonthlyRainfallSummary(): Promise<
-  MonthlyRainfallSummary[]
-> {
-  return fetchJson<MonthlyRainfallSummary[]>(
-    `${API_BASE_URL}/api/v1/rainfall/assam/monthly-summary`
-  );
-}
-
-
-export async function getAssamRainfallField(
-  selectedDate = "2025-05-30"
-): Promise<RainfallFieldResponse> {
-  const searchParams = new URLSearchParams({
-    selected_date: selectedDate,
-  });
-
-  return fetchJson<RainfallFieldResponse>(
-    `${API_BASE_URL}/api/v1/rainfall/assam/field?${searchParams.toString()}`
-  );
-}
-
-
-export async function getAssamRainfallFieldSequence(
-  startDate = "2025-05-24",
-  endDate = "2025-06-07"
-): Promise<RainfallFieldSequenceResponse> {
-  const searchParams = new URLSearchParams({
-    start_date: startDate,
-    end_date: endDate,
-  });
-
-  return fetchJson<RainfallFieldSequenceResponse>(
-    `${API_BASE_URL}/api/v1/rainfall/assam/field-sequence?${searchParams.toString()}`
-  );
-}
-
-export async function getAssamDailyRainfallAnomalies(): Promise<
-  DailyRainfallAnomaly[]
-> {
-  return fetchJson<DailyRainfallAnomaly[]>(
-    `${API_BASE_URL}/api/v1/rainfall/assam/daily-anomalies`
-  );
-}
-
-export async function getAssamRainfallAnomalySummary(): Promise<RainfallAnomalySummaryResponse> {
-  return fetchJson<RainfallAnomalySummaryResponse>(
-    `${API_BASE_URL}/api/v1/rainfall/assam/anomaly-summary`
-  );
-}
-
-export async function getAssamSeasonalRainfallSummary(): Promise<
-  SeasonalRainfallSummary[]
-> {
-  return fetchJson<SeasonalRainfallSummary[]>(
-    `${API_BASE_URL}/api/v1/rainfall/assam/seasonal-summary`
-  );
-}
-
-export async function getAssamTemperatureMetadata(): Promise<
-  TemperatureMetadataResponse
-> {
-  return fetchJson<TemperatureMetadataResponse>(
-    `${API_BASE_URL}/api/v1/temperature/assam/metadata`
-  );
-}
-
-export async function getAssamDailyTemperatureSummary(): Promise<
-  DailyTemperatureSummary[]
-> {
-  return fetchJson<DailyTemperatureSummary[]>(
-    `${API_BASE_URL}/api/v1/temperature/assam/daily-summary`
-  );
-}
-
-export async function getAssamMonthlyTemperatureSummary(): Promise<
-  MonthlyTemperatureSummary[]
-> {
-  return fetchJson<MonthlyTemperatureSummary[]>(
-    `${API_BASE_URL}/api/v1/temperature/assam/monthly-summary`
-  );
-}
-
-export async function getAssamTemperatureSummary(): Promise<
-  TemperatureSummaryResponse
-> {
-  return fetchJson<TemperatureSummaryResponse>(
-    `${API_BASE_URL}/api/v1/temperature/assam/summary`
+export async function getAssamMonthlyTemperatureSummary():
+  Promise<MonthlyTemperatureSummary[]> {
+  return requestJson<MonthlyTemperatureSummary[]>(
+    "/api/v1/temperature/assam/monthly-summary",
   );
 }
 
 export async function getAssamTemperatureField(
-  selectedDate = "2025-07-24",
-  variable = "TMEAN"
+  selectedDate: string,
+  variable: TemperatureVariable,
 ): Promise<TemperatureFieldResponse> {
-  const searchParams = new URLSearchParams({
+  const params = new URLSearchParams({
     selected_date: selectedDate,
     variable,
   });
 
-  return fetchJson<TemperatureFieldResponse>(
-    `${API_BASE_URL}/api/v1/temperature/assam/field?${searchParams.toString()}`
+  return requestJson<TemperatureFieldResponse>(
+    `/api/v1/temperature/assam/field?${params.toString()}`,
+  );
+}
+
+/* =========================================================
+   V2 simulation types
+   ========================================================= */
+
+export type RainfallIntensityClass =
+  | "trace"
+  | "light"
+  | "moderate"
+  | "heavy"
+  | "very_heavy"
+  | "extreme";
+
+export type ClimateStressClass =
+  | "low"
+  | "moderate"
+  | "high"
+  | "severe";
+
+export type ScenarioComparisonMode =
+  | "original"
+  | "simulated"
+  | "difference";
+
+export interface RainfallScenarioRequest {
+  selected_date: string;
+  rainfall_change_percent: number;
+}
+
+export interface RainfallScenarioCell {
+  latitude: number;
+  longitude: number;
+  original_rainfall_mm: number;
+  simulated_rainfall_mm: number;
+  rainfall_difference_mm: number;
+  original_intensity: RainfallIntensityClass;
+  simulated_intensity: RainfallIntensityClass;
+  intensity_changed: boolean;
+}
+
+export interface RainfallScenarioStatistics {
+  original_mean_mm: number;
+  simulated_mean_mm: number;
+  mean_difference_mm: number;
+  original_min_mm: number;
+  simulated_min_mm: number;
+  original_max_mm: number;
+  simulated_max_mm: number;
+  affected_cell_count: number;
+  intensity_changed_cell_count: number;
+  original_extreme_cell_count: number;
+  simulated_extreme_cell_count: number;
+}
+
+export interface ClimateStressResult {
+  score: number;
+  classification: ClimateStressClass;
+  rainfall_intensity_component: number;
+  rainfall_change_component: number;
+  extreme_cell_component: number;
+  explanation: string;
+}
+
+export interface RainfallScenarioResponse {
+  region: string;
+  selected_date: string;
+  scenario_type: string;
+  rainfall_change_percent: number;
+  unit: string;
+  statistics: RainfallScenarioStatistics;
+  stress: ClimateStressResult;
+  cells: RainfallScenarioCell[];
+}
+
+/* =========================================================
+   V2 simulation API
+   ========================================================= */
+
+export async function runAssamRainfallScenario(
+  payload: RainfallScenarioRequest,
+): Promise<RainfallScenarioResponse> {
+  return requestJson<RainfallScenarioResponse>(
+    "/api/v1/simulation/assam/rainfall-scenario",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
   );
 }
