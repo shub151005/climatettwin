@@ -7,6 +7,8 @@ import type {
   RainfallMetadataResponse,
   TemperatureFieldResponse,
   TemperatureMetadataResponse,
+  RainfallScenarioResponse,
+  ScenarioComparisonMode,
 } from "../../services/api";
 
 type ClimateLayer = "rainfall" | "TMEAN" | "TMAX" | "TMIN";
@@ -45,6 +47,11 @@ interface ClimateCommandCenterProps {
   onNextSequenceFrame: () => void;
   onToggleRainfallAnimation: () => void;
   onSingleRainfallDateChange: (dateValue: string) => void;
+  rainfallScenarioResult: RainfallScenarioResponse | null;
+  simulationComparisonMode: ScenarioComparisonMode;
+  simulationProgress: number;
+  isSimulationPlaying: boolean;
+  onReplayRainfallSimulation: () => void;
 }
 
 export function ClimateCommandCenter({
@@ -77,6 +84,11 @@ export function ClimateCommandCenter({
   onNextSequenceFrame,
   onToggleRainfallAnimation,
   onSingleRainfallDateChange,
+  rainfallScenarioResult,
+  simulationComparisonMode,
+  simulationProgress,
+  isSimulationPlaying,
+  onReplayRainfallSimulation,
 }: ClimateCommandCenterProps) {
   const activeLayerLabel =
     activeClimateLayer === "rainfall" ? "Rainfall" : activeClimateLayer;
@@ -156,6 +168,9 @@ export function ClimateCommandCenter({
               rainfallData={rainfallField}
               temperatureData={temperatureField}
               activeLayer={activeClimateLayer}
+              rainfallScenarioResult={rainfallScenarioResult}
+              simulationComparisonMode={simulationComparisonMode}
+              simulationProgress={simulationProgress}
             />
           )}
         </div>
@@ -298,6 +313,35 @@ export function ClimateCommandCenter({
           </button>
         </div>
 
+        {rainfallScenarioResult && activeClimateLayer === "rainfall" && (
+          <div style={scenarioProgressStyle}>
+            <div>
+              <p style={scenarioProgressLabelStyle}>Scenario progression</p>
+              <p style={scenarioProgressValueStyle}>
+                {Math.round(simulationProgress * 100)}% · {simulationComparisonMode}
+              </p>
+            </div>
+
+            <div style={scenarioProgressTrackStyle}>
+              <div
+                style={{
+                  ...scenarioProgressFillStyle,
+                  width: `${Math.round(simulationProgress * 100)}%`,
+                }}
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={onReplayRainfallSimulation}
+              disabled={isSimulationPlaying}
+              style={scenarioReplayButtonStyle}
+            >
+              {isSimulationPlaying ? "Animating" : "Replay"}
+            </button>
+          </div>
+        )}
+
         <div style={bottomTimelineStyle}>
           <div style={timelineLeftStyle}>
             <p style={timelineTitleStyle}>Rainfall Timeline</p>
@@ -434,6 +478,69 @@ function InfoRow({ label, value }: InfoRowProps) {
     </div>
   );
 }
+
+const scenarioProgressStyle = {
+  position: "absolute",
+  left: "50%",
+  bottom: "96px",
+  transform: "translateX(-50%)",
+  zIndex: 9,
+  width: "min(620px, calc(100% - 580px))",
+  minWidth: "360px",
+  display: "grid",
+  gridTemplateColumns: "auto 1fr auto",
+  alignItems: "center",
+  gap: "14px",
+  padding: "11px 14px",
+  borderRadius: "12px",
+  background: "rgba(8, 15, 30, 0.86)",
+  border: "1px solid rgba(236, 106, 6, 0.42)",
+  backdropFilter: "blur(16px)",
+  boxShadow: "0 18px 44px rgba(2, 6, 23, 0.5)",
+} as const;
+
+const scenarioProgressLabelStyle = {
+  margin: 0,
+  color: "#94a3b8",
+  fontSize: "10px",
+  fontWeight: 900,
+  textTransform: "uppercase",
+  letterSpacing: "0.09em",
+} as const;
+
+const scenarioProgressValueStyle = {
+  margin: "3px 0 0",
+  color: "#f97316",
+  fontSize: "12px",
+  fontWeight: 950,
+  textTransform: "capitalize",
+} as const;
+
+const scenarioProgressTrackStyle = {
+  height: "5px",
+  overflow: "hidden",
+  borderRadius: "999px",
+  background: "rgba(71, 85, 105, 0.7)",
+} as const;
+
+const scenarioProgressFillStyle = {
+  height: "100%",
+  borderRadius: "999px",
+  background: "linear-gradient(90deg, #22d3ee, #f97316)",
+  boxShadow: "0 0 12px rgba(249, 115, 22, 0.55)",
+  transition: "width 40ms linear",
+} as const;
+
+const scenarioReplayButtonStyle = {
+  border: "1px solid rgba(249, 115, 22, 0.55)",
+  borderRadius: "8px",
+  background: "rgba(249, 115, 22, 0.14)",
+  color: "#fdba74",
+  padding: "7px 11px",
+  fontSize: "11px",
+  fontWeight: 950,
+  cursor: "pointer",
+} as const;
 
 function formatRainfallClass(value: string): string {
   return value

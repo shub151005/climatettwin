@@ -13,6 +13,8 @@ import assamOuterBoundary from "../../data/geojson/assam-outer-boundary.json";
 import type {
   RainfallFieldResponse,
   TemperatureFieldResponse,
+  RainfallScenarioResponse,
+  ScenarioComparisonMode,
 } from "../../services/api";
 
 
@@ -25,6 +27,9 @@ interface SmoothClimateOverlayProps {
   activeLayer: ClimateLayer;
   rainfallData: RainfallFieldResponse | null;
   temperatureData: TemperatureFieldResponse | null;
+  rainfallScenarioResult: RainfallScenarioResponse | null;
+  simulationComparisonMode: ScenarioComparisonMode;
+  simulationProgress: number;
 }
 
 
@@ -57,6 +62,9 @@ export function SmoothClimateOverlay({
   activeLayer,
   rainfallData,
   temperatureData,
+  rainfallScenarioResult,
+  simulationComparisonMode,
+  simulationProgress,
 }: SmoothClimateOverlayProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -102,7 +110,17 @@ export function SmoothClimateOverlay({
       clipToAssamBoundary(context, activeMap);
 
       if (activeLayer === "rainfall") {
-        drawRainfallField(context, activeMap, rainfallData);
+        if (rainfallScenarioResult) {
+          drawScenarioRainfallField(
+            context,
+            activeMap,
+            rainfallScenarioResult,
+            simulationComparisonMode,
+            simulationProgress
+          );
+        } else {
+          drawRainfallField(context, activeMap, rainfallData);
+        }
       } else {
         drawTemperatureField(context, activeMap, temperatureData, activeLayer);
       }
@@ -130,7 +148,16 @@ export function SmoothClimateOverlay({
       activeMap.off("zoom", redraw);
       activeMap.off("resize", redraw);
     };
-  }, [map, isMapReady, activeLayer, rainfallData, temperatureData]);
+  }, [
+    map,
+    isMapReady,
+    activeLayer,
+    rainfallData,
+    temperatureData,
+    rainfallScenarioResult,
+    simulationComparisonMode,
+    simulationProgress,
+  ]);
 
   return (
     <canvas
@@ -183,6 +210,178 @@ function drawRainfallField(
   addRainfallTexture(context, map, visibleCells.length);
 }
 
+
+function drawScenarioRainfallField(
+  context: CanvasRenderingContext2D,
+  map: MapLibreMap,
+  scenario: RainfallScenarioResponse,
+  comparisonMode: ScenarioComparisonMode,
+  progress: number
+) {
+  const clampedProgress = Math.max(0, Math.min(progress, 1));
+
+  context.save();
+  context.globalCompositeOperation = "source-over";
+
+  for (const cell of scenario.cells) {
+    const projected = map.project([cell.longitude, cell.latitude]);
+    const animatedRainfall = lerp(
+      cell.original_rainfall_mm,
+      cell.simulated_rainfall_mm,
+      clampedProgress
+    );
+
+    if (comparisonMode === "difference") {
+      const animatedDifference = cell.rainfall_difference_mm * clampedProgress;
+
+      if (Math.abs(animatedDifference) < 0.05) {
+        continue;
+      }
+
+      drawSoftBlob({
+        context,
+        x: projected.x,
+        y: projected.y,
+        radius: getDifferenceRadius(animatedDifference, map.getZoom()),
+        color: getDifferenceColor(animatedDifference),
+        alpha: getDifferenceAlpha(animatedDifference),
+        hardCore: Math.abs(animatedDifference) >= 20,
+      });
+
+      continue;
+    }
+
+    const value =
+      comparisonMode === "original"
+        ? cell.original_rainfall_mm
+        : animatedRainfall;
+
+    if (value <= 0.2) {
+      continue;
+    }
+
+    const baseColor = getRainfallColor(value);
+    const color =
+      comparisonMode === "simulated"
+        ? mixHexColors(baseColor, "#f97316", clampedProgress * 0.22)
+        : baseColor;
+
+    drawSoftBlob({
+      context,
+      x: projected.x,
+      y: projected.y,
+      radius: getRainfallRadius(value, map.getZoom()),
+      color,
+      alpha: getRainfallAlpha(value),
+      hardCore: value >= 25,
+    });
+
+    if (
+      comparisonMode === "simulated" &&
+      cell.intensity_changed &&
+      clampedProgress > 0.35
+    ) {
+      drawChangedCellPulse(
+        context,
+        projected.x,
+        projected.y,
+        map.getZoom(),
+        clampedProgress
+      );
+    }
+  }
+
+  context.restore();
+
+  if (comparisonMode !== "difference") {
+    addRainfallTexture(context, map, scenario.cells.length);
+  }
+}
+
+function drawChangedCellPulse(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  zoom: number,
+  progress: number
+) {
+  const pulsePhase = Math.sin(progress * Math.PI * 6) * 0.5 + 0.5;
+  const radius = 9 + zoom * 1.6 + pulsePhase * 7;
+
+  context.save();
+  context.beginPath();
+  context.arc(x, y, radius, 0, Math.PI * 2);
+  context.strokeStyle = `rgba(249, 115, 22, ${0.28 + pulsePhase * 0.38})`;
+  context.lineWidth = 1.2 + pulsePhase * 1.4;
+  context.shadowColor = "rgba(249, 115, 22, 0.8)";
+  context.shadowBlur = 8 + pulsePhase * 8;
+  context.stroke();
+  context.restore();
+}
+
+function getDifferenceColor(value: number): string {
+  if (value < -10) {
+    return "#2563eb";
+  }
+
+  if (value < 0) {
+    return "#22d3ee";
+  }
+
+  if (value < 10) {
+    return "#facc15";
+  }
+
+  if (value < 25) {
+    return "#fb923c";
+  }
+
+  if (value < 50) {
+    return "#f97316";
+  }
+
+  return "#ef4444";
+}
+
+function getDifferenceAlpha(value: number): number {
+  const magnitude = Math.abs(value);
+  return Math.min(0.82, 0.3 + magnitude / 90);
+}
+
+function getDifferenceRadius(value: number, zoom: number): number {
+  const magnitude = Math.abs(value);
+  return 14 + zoom * 2.6 + Math.min(magnitude, 60) * 0.22;
+}
+
+function lerp(start: number, end: number, progress: number): number {
+  return start + (end - start) * progress;
+}
+
+function mixHexColors(first: string, second: string, amount: number): string {
+  const clampedAmount = Math.max(0, Math.min(amount, 1));
+  const firstRgb = hexToRgb(first);
+  const secondRgb = hexToRgb(second);
+
+  const red = Math.round(lerp(firstRgb.red, secondRgb.red, clampedAmount));
+  const green = Math.round(lerp(firstRgb.green, secondRgb.green, clampedAmount));
+  const blue = Math.round(lerp(firstRgb.blue, secondRgb.blue, clampedAmount));
+
+  return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
+}
+
+function hexToRgb(hexColor: string) {
+  const cleanHex = hexColor.replace("#", "");
+
+  return {
+    red: Number.parseInt(cleanHex.slice(0, 2), 16),
+    green: Number.parseInt(cleanHex.slice(2, 4), 16),
+    blue: Number.parseInt(cleanHex.slice(4, 6), 16),
+  };
+}
+
+function toHex(value: number): string {
+  return Math.max(0, Math.min(value, 255)).toString(16).padStart(2, "0");
+}
 
 function drawTemperatureField(
   context: CanvasRenderingContext2D,

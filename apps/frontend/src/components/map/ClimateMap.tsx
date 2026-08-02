@@ -12,6 +12,8 @@ import { SmoothClimateOverlay } from "./SmoothClimateOverlay";
 import type {
   RainfallFieldResponse,
   TemperatureFieldResponse,
+  RainfallScenarioResponse,
+  ScenarioComparisonMode,
 } from "../../services/api";
 
 
@@ -22,6 +24,9 @@ interface ClimateMapProps {
   rainfallData: RainfallFieldResponse | null;
   temperatureData: TemperatureFieldResponse | null;
   activeLayer: ClimateLayer;
+  rainfallScenarioResult: RainfallScenarioResponse | null;
+  simulationComparisonMode: ScenarioComparisonMode;
+  simulationProgress: number;
 }
 
 
@@ -53,11 +58,23 @@ const temperatureLegendItems = [
   { label: "Very Hot", range: "≥ 35 °C", color: "#dc2626" },
 ];
 
+const rainfallDifferenceLegendItems = [
+  { label: "Reduction", range: "< -10 mm", color: "#2563eb" },
+  { label: "Slight reduction", range: "-10–0 mm", color: "#22d3ee" },
+  { label: "Minimal change", range: "≈ 0 mm", color: "#94a3b8" },
+  { label: "Increase", range: "0–20 mm", color: "#facc15" },
+  { label: "Strong increase", range: "20–50 mm", color: "#f97316" },
+  { label: "Extreme increase", range: "> 50 mm", color: "#ef4444" },
+];
+
 
 export function ClimateMap({
   rainfallData,
   temperatureData,
   activeLayer,
+  rainfallScenarioResult,
+  simulationComparisonMode,
+  simulationProgress,
 }: ClimateMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -85,12 +102,23 @@ export function ClimateMap({
     return buildTemperatureGeoJson(temperatureData);
   }, [temperatureData]);
 
-  const legendItems =
-    activeLayer === "rainfall" ? rainfallLegendItems : temperatureLegendItems;
+  const isDifferenceMode =
+    activeLayer === "rainfall" &&
+    rainfallScenarioResult !== null &&
+    simulationComparisonMode === "difference";
 
-  const legendTitle =
-    activeLayer === "rainfall"
-      ? "Rainfall Intensity"
+  const legendItems = isDifferenceMode
+    ? rainfallDifferenceLegendItems
+    : activeLayer === "rainfall"
+      ? rainfallLegendItems
+      : temperatureLegendItems;
+
+  const legendTitle = isDifferenceMode
+    ? "Scenario Difference"
+    : activeLayer === "rainfall"
+      ? simulationComparisonMode === "simulated" && rainfallScenarioResult
+        ? `Simulated Rainfall · ${Math.round(simulationProgress * 100)}%`
+        : "Rainfall Intensity"
       : `${activeLayer} Temperature`;
 
   useEffect(() => {
@@ -357,6 +385,9 @@ export function ClimateMap({
         activeLayer={activeLayer}
         rainfallData={rainfallData}
         temperatureData={temperatureData}
+        rainfallScenarioResult={rainfallScenarioResult}
+        simulationComparisonMode={simulationComparisonMode}
+        simulationProgress={simulationProgress}
       />
 
       <MapLegend

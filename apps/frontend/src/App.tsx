@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { MonthlyRainfallBarChart } from "./components/charts/MonthlyRainfallBarChart";
 import { MonthlyTemperatureChart } from "./components/charts/MonthlyTemperatureChart";
@@ -110,6 +110,9 @@ function App() {
     useState<RainfallScenarioResponse | null>(null);
   const [isSimulationLoading, setIsSimulationLoading] = useState(false);
   const [simulationError, setSimulationError] = useState<string | null>(null);
+  const [simulationProgress, setSimulationProgress] = useState(0);
+  const [isSimulationPlaying, setIsSimulationPlaying] = useState(false);
+  const simulationAnimationFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     async function loadInitialData() {
@@ -565,6 +568,49 @@ function App() {
     };
   }, [isPlayingFieldAnimation, fieldSequence]);
 
+  useEffect(() => {
+    if (!isSimulationPlaying || !rainfallScenarioResult) {
+      return;
+    }
+
+    const durationMs = 1800;
+    const startedAt = performance.now();
+
+    function animate(now: number) {
+      const elapsed = now - startedAt;
+      const linearProgress = Math.min(elapsed / durationMs, 1);
+      const easedProgress = 1 - Math.pow(1 - linearProgress, 3);
+
+      setSimulationProgress(easedProgress);
+
+      if (linearProgress < 1) {
+        simulationAnimationFrameRef.current = window.requestAnimationFrame(animate);
+      } else {
+        simulationAnimationFrameRef.current = null;
+        setIsSimulationPlaying(false);
+      }
+    }
+
+    simulationAnimationFrameRef.current = window.requestAnimationFrame(animate);
+
+    return () => {
+      if (simulationAnimationFrameRef.current !== null) {
+        window.cancelAnimationFrame(simulationAnimationFrameRef.current);
+        simulationAnimationFrameRef.current = null;
+      }
+    };
+  }, [isSimulationPlaying, rainfallScenarioResult]);
+
+  function handleReplayRainfallSimulation() {
+    if (!rainfallScenarioResult) {
+      return;
+    }
+
+    setSimulationComparisonMode("simulated");
+    setSimulationProgress(0);
+    setIsSimulationPlaying(true);
+  }
+
   async function handleRunRainfallSimulation() {
     try {
       setSimulationError(null);
@@ -578,6 +624,8 @@ function App() {
 
       setRainfallScenarioResult(result);
       setSimulationComparisonMode("simulated");
+      setSimulationProgress(0);
+      setIsSimulationPlaying(true);
       setActiveClimateLayer("rainfall");
     } catch (caughtError) {
       setSimulationError(
@@ -594,6 +642,8 @@ function App() {
     setRainfallScenarioResult(null);
     setSimulationError(null);
     setSimulationComparisonMode("original");
+    setSimulationProgress(0);
+    setIsSimulationPlaying(false);
     setRainfallChangePercent(30);
     setSimulationDate(selectedFieldDate);
   }
@@ -651,6 +701,11 @@ function App() {
           onNextSequenceFrame={handleNextSequenceFrame}
           onToggleRainfallAnimation={handleToggleRainfallAnimation}
           onSingleRainfallDateChange={handleFieldDateChange}
+          rainfallScenarioResult={rainfallScenarioResult}
+          simulationComparisonMode={simulationComparisonMode}
+          simulationProgress={simulationProgress}
+          isSimulationPlaying={isSimulationPlaying}
+          onReplayRainfallSimulation={handleReplayRainfallSimulation}
         />
 
           <div style={simulationPanelPlacementStyle}>
