@@ -219,20 +219,30 @@ function drawScenarioRainfallField(
   progress: number
 ) {
   const clampedProgress = Math.max(0, Math.min(progress, 1));
+  const longitudes = scenario.cells.map((cell) => cell.longitude);
+  const latitudes = scenario.cells.map((cell) => cell.latitude);
+  const minLongitude = Math.min(...longitudes);
+  const maxLongitude = Math.max(...longitudes);
+  const minLatitude = Math.min(...latitudes);
+  const maxLatitude = Math.max(...latitudes);
 
   context.save();
   context.globalCompositeOperation = "source-over";
 
   for (const cell of scenario.cells) {
     const projected = map.project([cell.longitude, cell.latitude]);
-    const animatedRainfall = lerp(
-      cell.original_rainfall_mm,
-      cell.simulated_rainfall_mm,
-      clampedProgress
-    );
+    const localProgress = getSpatialScenarioProgress({
+      globalProgress: clampedProgress,
+      longitude: cell.longitude,
+      latitude: cell.latitude,
+      minLongitude,
+      maxLongitude,
+      minLatitude,
+      maxLatitude,
+    });
 
     if (comparisonMode === "difference") {
-      const animatedDifference = cell.rainfall_difference_mm * clampedProgress;
+      const animatedDifference = cell.rainfall_difference_mm * localProgress;
 
       if (Math.abs(animatedDifference) < 0.05) {
         continue;
@@ -244,7 +254,7 @@ function drawScenarioRainfallField(
         y: projected.y,
         radius: getDifferenceRadius(animatedDifference, map.getZoom()),
         color: getDifferenceColor(animatedDifference),
-        alpha: getDifferenceAlpha(animatedDifference),
+        alpha: getDifferenceAlpha(animatedDifference) * (0.78 + localProgress * 0.22),
         hardCore: Math.abs(animatedDifference) >= 20,
       });
 
@@ -254,39 +264,44 @@ function drawScenarioRainfallField(
     const value =
       comparisonMode === "original"
         ? cell.original_rainfall_mm
-        : animatedRainfall;
+        : lerp(
+            cell.original_rainfall_mm,
+            cell.simulated_rainfall_mm,
+            localProgress
+          );
 
     if (value <= 0.2) {
       continue;
     }
 
     const baseColor = getRainfallColor(value);
-    const color =
-      comparisonMode === "simulated"
-        ? mixHexColors(baseColor, "#f97316", clampedProgress * 0.22)
-        : baseColor;
+    const scenarioTint = comparisonMode === "simulated" ? localProgress * 0.09 : 0;
+    const color = mixHexColors(baseColor, "#f97316", scenarioTint);
+    const baseRadius = getRainfallRadius(value, map.getZoom());
+    const settledRadius = baseRadius * (0.97 + localProgress * 0.03);
 
     drawSoftBlob({
       context,
       x: projected.x,
       y: projected.y,
-      radius: getRainfallRadius(value, map.getZoom()),
+      radius: settledRadius,
       color,
-      alpha: getRainfallAlpha(value),
+      alpha: getRainfallAlpha(value) * (0.94 + localProgress * 0.06),
       hardCore: value >= 25,
     });
 
     if (
       comparisonMode === "simulated" &&
       cell.intensity_changed &&
-      clampedProgress > 0.35
+      localProgress > 0.82 &&
+      localProgress < 1
     ) {
-      drawChangedCellPulse(
+      drawChangedCellSettleRing(
         context,
         projected.x,
         projected.y,
         map.getZoom(),
-        clampedProgress
+        localProgress
       );
     }
   }
@@ -298,23 +313,74 @@ function drawScenarioRainfallField(
   }
 }
 
-function drawChangedCellPulse(
+function getSpatialScenarioProgress({
+  globalProgress,
+  longitude,
+  latitude,
+  minLongitude,
+  maxLongitude,
+  minLatitude,
+  maxLatitude,
+}: {
+  globalProgress: number;
+  longitude: number;
+  latitude: number;
+  minLongitude: number;
+  maxLongitude: number;
+  minLatitude: number;
+  maxLatitude: number;
+}): number {
+  const longitudeRange = Math.max(maxLongitude - minLongitude, 0.0001);
+  const latitudeRange = Math.max(maxLatitude - minLatitude, 0.0001);
+
+  const normalizedLongitude = (longitude - minLongitude) / longitudeRange;
+  const normalizedLatitude = (latitude - minLatitude) / latitudeRange;
+
+  // West-to-east propagation with a subtle north/south variation so the
+  // transition does not look like a flat wipe across the map.
+  const spatialDelay =
+    normalizedLongitude * 0.46 +
+    Math.abs(normalizedLatitude - 0.5) * 0.09;
+
+  const baselineHold = 0.1;
+  const propagationWindow = 0.72;
+  const cellStart = baselineHold + spatialDelay * 0.34;
+  const cellEnd = Math.min(cellStart + propagationWindow, 0.96);
+
+  return smoothStep(cellStart, cellEnd, globalProgress);
+}
+
+function smoothStep(edgeStart: number, edgeEnd: number, value: number): number {
+  if (edgeStart === edgeEnd) {
+    return value >= edgeEnd ? 1 : 0;
+  }
+
+  const progress = Math.max(
+    0,
+    Math.min((value - edgeStart) / (edgeEnd - edgeStart), 1)
+  );
+
+  return progress * progress * (3 - 2 * progress);
+}
+
+function drawChangedCellSettleRing(
   context: CanvasRenderingContext2D,
   x: number,
   y: number,
   zoom: number,
   progress: number
 ) {
-  const pulsePhase = Math.sin(progress * Math.PI * 6) * 0.5 + 0.5;
-  const radius = 9 + zoom * 1.6 + pulsePhase * 7;
+  const settleProgress = smoothStep(0.82, 1, progress);
+  const inverseProgress = 1 - settleProgress;
+  const radius = 10 + zoom * 1.45 + settleProgress * 5;
 
   context.save();
   context.beginPath();
   context.arc(x, y, radius, 0, Math.PI * 2);
-  context.strokeStyle = `rgba(249, 115, 22, ${0.28 + pulsePhase * 0.38})`;
-  context.lineWidth = 1.2 + pulsePhase * 1.4;
-  context.shadowColor = "rgba(249, 115, 22, 0.8)";
-  context.shadowBlur = 8 + pulsePhase * 8;
+  context.strokeStyle = `rgba(249, 115, 22, ${inverseProgress * 0.22})`;
+  context.lineWidth = 1 + inverseProgress * 0.8;
+  context.shadowColor = "rgba(249, 115, 22, 0.38)";
+  context.shadowBlur = 4 + inverseProgress * 5;
   context.stroke();
   context.restore();
 }

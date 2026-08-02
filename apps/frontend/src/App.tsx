@@ -573,13 +573,13 @@ function App() {
       return;
     }
 
-    const durationMs = 1800;
+    const durationMs = 4800;
     const startedAt = performance.now();
 
     function animate(now: number) {
       const elapsed = now - startedAt;
       const linearProgress = Math.min(elapsed / durationMs, 1);
-      const easedProgress = 1 - Math.pow(1 - linearProgress, 3);
+      const easedProgress = easeInOutCubic(linearProgress);
 
       setSimulationProgress(easedProgress);
 
@@ -1087,6 +1087,14 @@ const MONTH_LABELS = [
   "November",
   "December",
 ];
+
+function easeInOutCubic(progress: number): number {
+  const clampedProgress = Math.max(0, Math.min(progress, 1));
+
+  return clampedProgress < 0.5
+    ? 4 * clampedProgress * clampedProgress * clampedProgress
+    : 1 - Math.pow(-2 * clampedProgress + 2, 3) / 2;
+}
 
 function clampDateStringToRange(
   dateValue: string,
