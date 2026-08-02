@@ -105,7 +105,7 @@ function MetricCard({
         background: highlighted
           ? "linear-gradient(145deg, rgba(8,145,178,0.15), rgba(15,23,42,0.72))"
           : "rgba(15, 23, 42, 0.6)",
-        padding: "10px 11px",
+        padding: "8px 9px",
         minWidth: 0,
         boxShadow: highlighted
           ? "0 0 22px rgba(34,211,238,0.08)"
@@ -131,7 +131,7 @@ function MetricCard({
           alignItems: "baseline",
           gap: "4px",
           color: "#f8fafc",
-          fontSize: "16px",
+          fontSize: "15px",
           fontWeight: 800,
           lineHeight: 1,
         }}
@@ -228,7 +228,8 @@ export default function SimulationControlPanel({
         ease: [0.22, 1, 0.36, 1],
       }}
       style={{
-        width: "min(360px, calc(100vw - 32px))",
+        width: "100%",
+        maxWidth: "360px",
         borderRadius: "18px",
         border: "1px solid rgba(34,211,238,0.22)",
         background:
@@ -248,7 +249,7 @@ export default function SimulationControlPanel({
           width: "100%",
           border: "none",
           background: "transparent",
-          padding: "15px 16px 13px",
+          padding: "12px 14px 10px",
           color: "inherit",
           cursor: "pointer",
           textAlign: "left",
@@ -281,16 +282,16 @@ export default function SimulationControlPanel({
               duration: 1.6,
             }}
             style={{
-              width: "34px",
-              height: "34px",
-              borderRadius: "11px",
+              width: "30px",
+              height: "30px",
+              borderRadius: "9px",
               display: "grid",
               placeItems: "center",
               border: "1px solid rgba(34,211,238,0.34)",
               background:
                 "linear-gradient(145deg, rgba(8,145,178,0.22), rgba(15,23,42,0.8))",
               color: "#67e8f9",
-              fontSize: "16px",
+              fontSize: "15px",
               flexShrink: 0,
             }}
           >
@@ -317,7 +318,7 @@ export default function SimulationControlPanel({
 
             <div
               style={{
-                fontSize: "15px",
+                fontSize: "14px",
                 fontWeight: 800,
                 whiteSpace: "nowrap",
                 overflow: "hidden",
@@ -380,16 +381,16 @@ export default function SimulationControlPanel({
 
             <div
               style={{
-                padding: "15px 16px 16px",
+                padding: "12px 14px 13px",
                 display: "grid",
-                gap: "15px",
+                gap: "11px",
               }}
             >
               <div
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
-                  gap: "10px",
+                  gap: "8px",
                 }}
               >
                 <label
@@ -456,7 +457,7 @@ export default function SimulationControlPanel({
 
                   <div
                     style={{
-                      minHeight: "36px",
+                      minHeight: "34px",
                       borderRadius: "10px",
                       border:
                         "1px solid rgba(34,211,238,0.28)",
@@ -469,7 +470,7 @@ export default function SimulationControlPanel({
                         rainfallChangePercent >= 0
                           ? "#fb923c"
                           : "#60a5fa",
-                      fontSize: "16px",
+                      fontSize: "14px",
                       fontWeight: 900,
                     }}
                   >
@@ -482,7 +483,7 @@ export default function SimulationControlPanel({
               <div
                 style={{
                   display: "grid",
-                  gap: "9px",
+                  gap: "7px",
                 }}
               >
                 <div
@@ -557,7 +558,7 @@ export default function SimulationControlPanel({
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr auto",
-                  gap: "9px",
+                  gap: "7px",
                 }}
               >
                 <motion.button
@@ -585,8 +586,8 @@ export default function SimulationControlPanel({
                   }
                   onClick={onRunSimulation}
                   style={{
-                    minHeight: "42px",
-                    borderRadius: "11px",
+                    minHeight: "38px",
+                    borderRadius: "9px",
                     border:
                       "1px solid rgba(103,232,249,0.46)",
                     background:
@@ -646,9 +647,9 @@ export default function SimulationControlPanel({
                   onClick={onResetSimulation}
                   disabled={isLoading}
                   style={{
-                    width: "42px",
-                    height: "42px",
-                    borderRadius: "11px",
+                    width: "38px",
+                    height: "38px",
+                    borderRadius: "9px",
                     border:
                       "1px solid rgba(148,163,184,0.22)",
                     background: "rgba(15,23,42,0.76)",
@@ -656,7 +657,7 @@ export default function SimulationControlPanel({
                     cursor: isLoading
                       ? "not-allowed"
                       : "pointer",
-                    fontSize: "16px",
+                    fontSize: "14px",
                   }}
                 >
                   ↻
@@ -680,11 +681,11 @@ export default function SimulationControlPanel({
                       y: -6,
                     }}
                     style={{
-                      borderRadius: "11px",
+                      borderRadius: "9px",
                       border:
                         "1px solid rgba(248,113,113,0.3)",
                       background: "rgba(127,29,29,0.22)",
-                      padding: "10px 11px",
+                      padding: "8px 9px",
                       color: "#fecaca",
                       fontSize: "11px",
                       lineHeight: 1.5,
@@ -712,7 +713,7 @@ export default function SimulationControlPanel({
                     }}
                     style={{
                       display: "grid",
-                      gap: "13px",
+                      gap: "9px",
                     }}
                   >
                     <div
@@ -741,7 +742,7 @@ export default function SimulationControlPanel({
                             "repeat(3, 1fr)",
                           gap: "3px",
                           padding: "4px",
-                          borderRadius: "11px",
+                          borderRadius: "9px",
                           border:
                             "1px solid rgba(148,163,184,0.15)",
                           background: "rgba(2,6,23,0.54)",
@@ -765,7 +766,7 @@ export default function SimulationControlPanel({
                                 zIndex: 1,
                                 border: "none",
                                 borderRadius: "8px",
-                                padding: "8px 5px",
+                                padding: "6px 4px",
                                 background: "transparent",
                                 color: active
                                   ? "#ecfeff"
@@ -810,7 +811,7 @@ export default function SimulationControlPanel({
                         display: "grid",
                         gridTemplateColumns:
                           "repeat(3, minmax(0, 1fr))",
-                        gap: "7px",
+                        gap: "6px",
                       }}
                     >
                       <MetricCard
@@ -866,58 +867,58 @@ export default function SimulationControlPanel({
                         border: `1px solid ${stressColor}55`,
                         background:
                           "linear-gradient(145deg, rgba(15,23,42,0.82), rgba(2,6,23,0.68))",
-                        padding: "12px",
+                        padding: "9px 10px",
                         display: "grid",
-                        gridTemplateColumns: "70px 1fr",
+                        gridTemplateColumns: "58px 1fr",
                         alignItems: "center",
-                        gap: "12px",
+                        gap: "9px",
                         boxShadow: `0 0 28px ${stressColor}12`,
                       }}
                     >
                       <div
                         style={{
                           position: "relative",
-                          width: "66px",
-                          height: "66px",
+                          width: "54px",
+                          height: "54px",
                           display: "grid",
                           placeItems: "center",
                         }}
                       >
                         <svg
-                          width="66"
-                          height="66"
-                          viewBox="0 0 66 66"
+                          width="54"
+                          height="54"
+                          viewBox="0 0 54 54"
                           style={{
                             transform: "rotate(-90deg)",
                           }}
                         >
                           <circle
-                            cx="33"
-                            cy="33"
-                            r="27"
+                            cx="27"
+                            cy="27"
+                            r="22"
                             fill="none"
                             stroke="rgba(51,65,85,0.7)"
-                            strokeWidth="6"
+                            strokeWidth="5"
                           />
 
                           <motion.circle
-                            cx="33"
-                            cy="33"
-                            r="27"
+                            cx="27"
+                            cy="27"
+                            r="22"
                             fill="none"
                             stroke={stressColor}
-                            strokeWidth="6"
+                            strokeWidth="5"
                             strokeLinecap="round"
-                            strokeDasharray={2 * Math.PI * 27}
+                            strokeDasharray={2 * Math.PI * 22}
                             initial={{
                               strokeDashoffset:
-                                2 * Math.PI * 27,
+                                2 * Math.PI * 22,
                             }}
                             animate={{
                               strokeDashoffset:
                                 2 *
                                 Math.PI *
-                                27 *
+                                22 *
                                 (1 -
                                   result.stress.score /
                                     100),
@@ -939,7 +940,7 @@ export default function SimulationControlPanel({
                             display: "grid",
                             placeItems: "center",
                             color: "#f8fafc",
-                            fontSize: "15px",
+                            fontSize: "14px",
                             fontWeight: 900,
                           }}
                         >
@@ -968,7 +969,7 @@ export default function SimulationControlPanel({
                           style={{
                             color: "#cbd5e1",
                             fontSize: "11px",
-                            lineHeight: 1.5,
+                            lineHeight: 1.4,
                           }}
                         >
                           {result.stress.explanation}
@@ -981,7 +982,7 @@ export default function SimulationControlPanel({
                         display: "grid",
                         gridTemplateColumns:
                           "repeat(3, minmax(0, 1fr))",
-                        gap: "7px",
+                        gap: "6px",
                       }}
                     >
                       <MetricCard

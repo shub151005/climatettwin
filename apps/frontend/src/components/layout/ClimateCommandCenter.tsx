@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { ClimateMap } from "../map/ClimateMap";
 
 import type {
@@ -52,6 +54,7 @@ interface ClimateCommandCenterProps {
   simulationProgress: number;
   isSimulationPlaying: boolean;
   onReplayRainfallSimulation: () => void;
+  simulationPanel: ReactNode;
 }
 
 export function ClimateCommandCenter({
@@ -89,6 +92,7 @@ export function ClimateCommandCenter({
   simulationProgress,
   isSimulationPlaying,
   onReplayRainfallSimulation,
+  simulationPanel,
 }: ClimateCommandCenterProps) {
   const activeLayerLabel =
     activeClimateLayer === "rainfall" ? "Rainfall" : activeClimateLayer;
@@ -174,6 +178,8 @@ export function ClimateCommandCenter({
             />
           )}
         </div>
+
+        <div style={simulationDockStyle}>{simulationPanel}</div>
 
         <div style={leftPanelStyle}>
           <p style={panelEyebrowStyle}>Observe · Understand · Simulate</p>
@@ -482,16 +488,16 @@ function InfoRow({ label, value }: InfoRowProps) {
 const scenarioProgressStyle = {
   position: "absolute",
   left: "50%",
-  bottom: "96px",
+  bottom: "112px",
   transform: "translateX(-50%)",
   zIndex: 9,
-  width: "min(620px, calc(100% - 580px))",
+  width: "min(560px, calc(100% - 610px))",
   minWidth: "360px",
   display: "grid",
   gridTemplateColumns: "auto 1fr auto",
   alignItems: "center",
-  gap: "14px",
-  padding: "11px 14px",
+  gap: "10px",
+  padding: "9px 12px",
   borderRadius: "12px",
   background: "rgba(8, 15, 30, 0.86)",
   border: "1px solid rgba(236, 106, 6, 0.42)",
@@ -720,6 +726,21 @@ const mapLoadingStyle = {
   color: "#f9fafb",
   background: "#020617",
   fontWeight: 900,
+} as const;
+
+const simulationDockStyle = {
+  position: "absolute",
+  top: "14px",
+  left: "50%",
+  transform: "translateX(-50%)",
+  zIndex: 10,
+  width: "clamp(300px, 22vw, 340px)",
+  maxHeight: "calc(100% - 218px)",
+  overflowY: "auto",
+  overflowX: "hidden",
+  pointerEvents: "auto",
+  scrollbarWidth: "thin",
+  scrollbarColor: "rgba(34, 211, 238, 0.35) transparent",
 } as const;
 
 const leftPanelStyle = {

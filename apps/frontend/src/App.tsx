@@ -670,7 +670,6 @@ function App() {
           margin: 0,
         }}
       >
-        <div style={commandCenterWrapperStyle}>
         <ClimateCommandCenter
           activeClimateLayer={activeClimateLayer}
           rainfallField={rainfallField}
@@ -706,9 +705,7 @@ function App() {
           simulationProgress={simulationProgress}
           isSimulationPlaying={isSimulationPlaying}
           onReplayRainfallSimulation={handleReplayRainfallSimulation}
-        />
-
-          <div style={simulationPanelPlacementStyle}>
+          simulationPanel={
             <SimulationControlPanel
               selectedDate={simulationDate}
               rainfallChangePercent={rainfallChangePercent}
@@ -722,8 +719,8 @@ function App() {
               onRunSimulation={handleRunRainfallSimulation}
               onResetSimulation={handleResetRainfallSimulation}
             />
-          </div>
-        </div>
+          }
+        />
 
         {error && <section style={errorStyle}>{error}</section>}
 
@@ -1118,19 +1115,6 @@ function formatSeason(value: string): string {
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 }
-
-const commandCenterWrapperStyle = {
-  position: "relative",
-  width: "100%",
-} as const;
-
-const simulationPanelPlacementStyle = {
-  position: "absolute",
-  top: "112px",
-  right: "292px",
-  zIndex: 30,
-  pointerEvents: "auto",
-} as const;
 
 const errorStyle = {
   marginBottom: "24px",
