@@ -55,6 +55,7 @@ interface ClimateCommandCenterProps {
   isSimulationPlaying: boolean;
   onReplayRainfallSimulation: () => void;
   simulationPanel: ReactNode;
+  showSimulationPanel?: boolean;
 }
 
 export function ClimateCommandCenter({
@@ -93,6 +94,7 @@ export function ClimateCommandCenter({
   isSimulationPlaying,
   onReplayRainfallSimulation,
   simulationPanel,
+  showSimulationPanel = true,
 }: ClimateCommandCenterProps) {
   const activeLayerLabel =
     activeClimateLayer === "rainfall" ? "Rainfall" : activeClimateLayer;
@@ -179,10 +181,12 @@ export function ClimateCommandCenter({
           )}
         </div>
 
-        <div style={simulationDockStyle}>{simulationPanel}</div>
+        {showSimulationPanel && (
+          <div style={simulationDockStyle}>{simulationPanel}</div>
+        )}
 
         <div style={leftPanelStyle}>
-          <p style={panelEyebrowStyle}>Observe · Understand · Simulate</p>
+          <p style={panelEyebrowStyle}>Observed Climate State</p>
           <h2 style={panelTitleStyle}>Assam Climate State</h2>
 
           {activeClimateLayer === "rainfall" && rainfallField && (
@@ -319,7 +323,9 @@ export function ClimateCommandCenter({
           </button>
         </div>
 
-        {rainfallScenarioResult && activeClimateLayer === "rainfall" && (
+        {showSimulationPanel &&
+          rainfallScenarioResult &&
+          activeClimateLayer === "rainfall" && (
           <div style={scenarioProgressStyle}>
             <div>
               <p style={scenarioProgressLabelStyle}>Scenario progression</p>
@@ -488,16 +494,16 @@ function InfoRow({ label, value }: InfoRowProps) {
 const scenarioProgressStyle = {
   position: "absolute",
   left: "50%",
-  bottom: "112px",
+  bottom: "96px",
   transform: "translateX(-50%)",
   zIndex: 9,
-  width: "min(560px, calc(100% - 610px))",
+  width: "min(620px, calc(100% - 580px))",
   minWidth: "360px",
   display: "grid",
   gridTemplateColumns: "auto 1fr auto",
   alignItems: "center",
-  gap: "10px",
-  padding: "9px 12px",
+  gap: "14px",
+  padding: "11px 14px",
   borderRadius: "12px",
   background: "rgba(8, 15, 30, 0.86)",
   border: "1px solid rgba(236, 106, 6, 0.42)",
@@ -730,12 +736,12 @@ const mapLoadingStyle = {
 
 const simulationDockStyle = {
   position: "absolute",
-  top: "14px",
+  top: "18px",
   left: "50%",
   transform: "translateX(-50%)",
   zIndex: 10,
-  width: "clamp(300px, 22vw, 340px)",
-  maxHeight: "calc(100% - 218px)",
+  width: "clamp(300px, 24vw, 360px)",
+  maxHeight: "calc(100% - 190px)",
   overflowY: "auto",
   overflowX: "hidden",
   pointerEvents: "auto",
@@ -748,14 +754,14 @@ const leftPanelStyle = {
   left: "18px",
   top: "18px",
   zIndex: 8,
-  width: "300px",
+  width: "244px",
   background: "rgba(15, 23, 42, 0.82)",
   border: "1px solid rgba(148, 163, 184, 0.32)",
-  borderRadius: "18px",
-  padding: "16px",
+  borderRadius: "15px",
+  padding: "12px 13px",
   color: "#f9fafb",
   backdropFilter: "blur(16px)",
-  boxShadow: "0 18px 50px rgba(2, 6, 23, 0.45)",
+  boxShadow: "0 16px 42px rgba(2, 6, 23, 0.42)",
 } as const;
 
 const rightPanelStyle = {
@@ -766,26 +772,26 @@ const rightPanelStyle = {
   width: "210px",
   background: "rgba(15, 23, 42, 0.82)",
   border: "1px solid rgba(148, 163, 184, 0.32)",
-  borderRadius: "18px",
-  padding: "16px",
+  borderRadius: "15px",
+  padding: "12px 13px",
   color: "#f9fafb",
   backdropFilter: "blur(16px)",
-  boxShadow: "0 18px 50px rgba(2, 6, 23, 0.45)",
+  boxShadow: "0 16px 42px rgba(2, 6, 23, 0.42)",
 } as const;
 
 const panelEyebrowStyle = {
-  margin: "0 0 7px",
+  margin: "0 0 5px",
   color: "#38bdf8",
-  fontSize: "11px",
+  fontSize: "9px",
   fontWeight: 900,
   textTransform: "uppercase",
   letterSpacing: "0.1em",
 } as const;
 
 const panelTitleStyle = {
-  margin: "0 0 14px",
+  margin: "0 0 8px",
   color: "#f9fafb",
-  fontSize: "21px",
+  fontSize: "17px",
   fontWeight: 950,
 } as const;
 
@@ -798,26 +804,26 @@ const sidePanelTitleStyle = {
 
 const panelBodyStyle = {
   display: "grid",
-  gap: "9px",
+  gap: "3px",
 } as const;
 
 const infoRowStyle = {
   display: "flex",
   justifyContent: "space-between",
-  gap: "12px",
-  padding: "8px 0",
+  gap: "10px",
+  padding: "5px 0",
   borderBottom: "1px solid rgba(148, 163, 184, 0.16)",
 } as const;
 
 const infoLabelStyle = {
   color: "#94a3b8",
-  fontSize: "12px",
+  fontSize: "10px",
   fontWeight: 800,
 } as const;
 
 const infoValueStyle = {
   color: "#f9fafb",
-  fontSize: "12px",
+  fontSize: "10px",
   fontWeight: 900,
   textAlign: "right",
 } as const;
@@ -896,7 +902,7 @@ const timelineTitleStyle = {
 const timelineMetaStyle = {
   margin: "5px 0 0",
   color: "#94a3b8",
-  fontSize: "12px",
+  fontSize: "10px",
   fontWeight: 800,
 } as const;
 
