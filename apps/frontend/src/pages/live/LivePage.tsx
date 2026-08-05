@@ -113,6 +113,25 @@ function LivePage() {
   const [simulationProgress, setSimulationProgress] = useState(0);
   const [isSimulationPlaying, setIsSimulationPlaying] = useState(false);
   const simulationAnimationFrameRef = useRef<number | null>(null);
+  const [isRouteLayoutReady, setIsRouteLayoutReady] = useState(false);
+
+  useEffect(() => {
+    let secondFrameId = 0;
+
+    const firstFrameId = window.requestAnimationFrame(() => {
+      secondFrameId = window.requestAnimationFrame(() => {
+        setIsRouteLayoutReady(true);
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(firstFrameId);
+
+      if (secondFrameId !== 0) {
+        window.cancelAnimationFrame(secondFrameId);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     async function loadInitialData() {
@@ -653,7 +672,7 @@ function LivePage() {
   return (
     <main
       style={{
-        width: "100vw",
+        width: "100%",
         minHeight: "100vh",
         background:
           "radial-gradient(circle at top left, rgba(14,165,233,0.18), transparent 28%), radial-gradient(circle at top right, rgba(249,115,22,0.16), transparent 30%), #020617",
@@ -670,7 +689,8 @@ function LivePage() {
           margin: 0,
         }}
       >
-        <ClimateCommandCenter
+        {isRouteLayoutReady ? (
+          <ClimateCommandCenter
           activeClimateLayer={activeClimateLayer}
           rainfallField={rainfallField}
           temperatureField={temperatureField}
@@ -720,7 +740,12 @@ function LivePage() {
               onResetSimulation={handleResetRainfallSimulation}
             />
           }
-        />
+          />
+        ) : (
+          <section style={routeMapPreparingStyle}>
+            Preparing Assam climate map...
+          </section>
+        )}
 
         {error && <section style={errorStyle}>{error}</section>}
 
@@ -1115,6 +1140,20 @@ function formatSeason(value: string): string {
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 }
+
+const routeMapPreparingStyle = {
+  minHeight: "620px",
+  marginBottom: "28px",
+  display: "grid",
+  placeItems: "center",
+  border: "1px solid rgba(148, 163, 184, 0.22)",
+  borderRadius: "22px",
+  background: "rgba(8, 15, 30, 0.82)",
+  color: "#94a3b8",
+  fontSize: "13px",
+  fontWeight: 900,
+  letterSpacing: "0.04em",
+} as const;
 
 const errorStyle = {
   marginBottom: "24px",

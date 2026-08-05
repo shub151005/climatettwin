@@ -26,6 +26,25 @@ export default function ScenarioLabPage() {
   const [isSimulationLoading, setIsSimulationLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const [isMapLayoutReady, setIsMapLayoutReady] = useState(false);
+
+  useEffect(() => {
+    let secondFrameId = 0;
+
+    const firstFrameId = window.requestAnimationFrame(() => {
+      secondFrameId = window.requestAnimationFrame(() => {
+        setIsMapLayoutReady(true);
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(firstFrameId);
+
+      if (secondFrameId !== 0) {
+        window.cancelAnimationFrame(secondFrameId);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     void loadRainfallField(DEFAULT_DATE);
@@ -169,8 +188,12 @@ export default function ScenarioLabPage() {
         </aside>
 
         <section style={mapPanelStyle}>
-          {isLoadingField ? (
-            <div style={loadingStyle}>Loading Assam rainfall field...</div>
+          {isLoadingField || !isMapLayoutReady ? (
+            <div style={loadingStyle}>
+              {isLoadingField
+                ? "Loading Assam rainfall field..."
+                : "Preparing Assam map workspace..."}
+            </div>
           ) : (
             <ClimateMap
               rainfallData={rainfallField}
@@ -283,9 +306,13 @@ function easeInOutCubic(progress: number): number {
 }
 
 const pageStyle = {
+  width: "100%",
+  maxWidth: "1920px",
   minHeight: "calc(100vh - 74px)",
-  padding: "14px",
+  margin: "0 auto",
+  padding: "clamp(12px, 1.2vw, 20px)",
   boxSizing: "border-box",
+  overflowX: "hidden",
 } as const;
 
 const headerStyle = {
@@ -335,21 +362,28 @@ const modePillStyle = {
 } as const;
 
 const workspaceStyle = {
-  height: "calc(100vh - 194px)",
+  width: "100%",
+  height: "calc(100vh - 206px)",
   minHeight: "640px",
   display: "grid",
-  gridTemplateColumns: "340px minmax(0, 1fr) 260px",
-  gap: "12px",
+  gridTemplateColumns:
+    "minmax(286px, 320px) minmax(520px, 1fr) minmax(230px, 260px)",
+  alignItems: "stretch",
+  gap: "14px",
+  boxSizing: "border-box",
 } as const;
 
 const controlsStyle = {
+  width: "100%",
   minWidth: 0,
   overflowY: "auto",
   overflowX: "hidden",
+  borderRadius: "14px",
 } as const;
 
 const mapPanelStyle = {
   position: "relative",
+  width: "100%",
   minWidth: 0,
   overflow: "hidden",
   border: "1px solid rgba(148, 163, 184, 0.22)",
@@ -366,8 +400,10 @@ const loadingStyle = {
 } as const;
 
 const intelligenceStyle = {
+  width: "100%",
   minWidth: 0,
   padding: "15px",
+  boxSizing: "border-box",
   overflowY: "auto",
   border: "1px solid rgba(148, 163, 184, 0.2)",
   borderRadius: "14px",
